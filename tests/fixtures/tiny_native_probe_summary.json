@@ -1,0 +1,12 @@
+{
+  "record_type": "native_probe_summary",
+  "task_id": "nyuv2_depth",
+  "model_id": "dino_v2_base",
+  "seed": 42,
+  "metrics": {
+    "rmse": 0.775666,
+    "abs_rel": 0.210637,
+    "delta1": 0.651754
+  },
+  "checkpoint": "native_probe.pt"
+}

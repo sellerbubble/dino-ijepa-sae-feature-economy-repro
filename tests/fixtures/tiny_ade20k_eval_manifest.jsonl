@@ -1,0 +1,2 @@
+{"image": "images/ade_0001.jpg", "segmentation": "seg/ade_0001.png", "target_values": [[0, 1], [0, 1]], "prediction_values": [[0, 1], [1, 1]], "split": "val"}
+{"image": "images/ade_0002.jpg", "segmentation": "seg/ade_0002.png", "target_values": [[0, 1], [1, 1]], "prediction_values": [[0, 0], [1, 1]], "split": "val"}

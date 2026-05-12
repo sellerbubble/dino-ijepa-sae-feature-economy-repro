@@ -1,0 +1,12 @@
+id: paper_v0_availability
+mode: compute_usage
+seed: 42
+dataset_split: imagenet_1k_val
+model_sae_pairs:
+  - model: dino_v2_base
+    sae: dino_l11_topk32_exp4
+  - model: ijepa_vit_h14
+    sae: ijepa_l31_topk32_exp4
+usage:
+  buckets: [dead, rare, medium, frequent_or_above]
+output_dir: ${ARTIFACT_ROOT}/paper_v0/availability

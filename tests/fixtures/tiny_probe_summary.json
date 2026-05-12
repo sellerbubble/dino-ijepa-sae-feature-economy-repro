@@ -1,0 +1,13 @@
+{
+  "record_type": "sae_probe_summary",
+  "task_id": "nyuv2_depth",
+  "model_id": "dino_v2_base",
+  "sae_id": "dino_l11_topk32_exp4",
+  "seed": 42,
+  "metrics": {
+    "rmse": 0.901716,
+    "abs_rel": 0.261054,
+    "delta1": 0.562204
+  },
+  "checkpoint": "probe.pt"
+}

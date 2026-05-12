@@ -1,0 +1,11 @@
+id: imagenet_1k
+type: classification
+train_manifest: ${DATA_ROOT}/imagenet/train_manifest.jsonl
+val_manifest: ${DATA_ROOT}/imagenet/val_manifest.jsonl
+metrics:
+  primary: top1
+  report: [top1, top5]
+readout:
+  type: linear_classifier
+  epochs: 20
+  batch_size: 512
