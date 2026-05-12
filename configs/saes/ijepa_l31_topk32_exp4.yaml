@@ -1,0 +1,9 @@
+id: ijepa_l31_topk32_exp4
+model_id: ijepa_vit_h14
+layer: 31
+checkpoint: ${SAE_ROOT}/ijepa_l31_topk32_exp4/final_sae.pt
+dict_size: null
+topk: 32
+expansion: 4
+normalize_activations: layer_norm
+trained_on: imagenet_1k_train

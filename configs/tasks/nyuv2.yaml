@@ -1,0 +1,11 @@
+id: nyuv2_depth
+type: dense_depth
+train_manifest: ${DATA_ROOT}/nyuv2/train_manifest.jsonl
+val_manifest: ${DATA_ROOT}/nyuv2/val_manifest.jsonl
+metrics:
+  primary: rmse
+  report: [rmse, abs_rel, delta1]
+readout:
+  type: light_dense_decoder
+  epochs: 20
+  batch_size: 32

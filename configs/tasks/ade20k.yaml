@@ -1,0 +1,11 @@
+id: ade20k_segmentation
+type: dense_segmentation
+train_manifest: ${DATA_ROOT}/ade20k/train_manifest.jsonl
+val_manifest: ${DATA_ROOT}/ade20k/val_manifest.jsonl
+metrics:
+  primary: miou
+  report: [miou, pixel_accuracy]
+readout:
+  type: light_dense_decoder
+  epochs: 20
+  batch_size: 32

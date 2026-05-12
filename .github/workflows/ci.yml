@@ -1,0 +1,85 @@
+name: public-repro-ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install package
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e .
+
+      - name: Run unit tests
+        run: |
+          PYTHONPATH=src python -m unittest discover -s tests
+
+      - name: Check public release hygiene
+        run: |
+          python scripts/check_public_release.py --root .
+
+      - name: Run public smoke chain
+        run: |
+          OUTPUT_ROOT=/tmp/feature_economy_public_smoke bash scripts/reproduce_smoke.sh
+
+      - name: Build tiny complete artifact bundle
+        run: |
+          OUTPUT_ROOT=/tmp/feature_economy_tiny_bundle bash scripts/build_tiny_artifact_bundle.sh
+
+      - name: Stage tiny artifact bundle from manifest
+        run: |
+          python scripts/create_artifact_export_manifest.py \
+            --run-plan-json /tmp/feature_economy_tiny_bundle/run_plan/tiny_dino_imagenet_run_plan.json \
+            --output-csv /tmp/feature_economy_tiny_stage_plan/export_manifest.csv \
+            --output-json /tmp/feature_economy_tiny_stage_plan/export_manifest.json
+          python - <<'PY'
+          import csv
+          from pathlib import Path
+
+          manifest_path = Path("/tmp/feature_economy_tiny_stage_plan/export_manifest.csv")
+          artifact_root = Path("/tmp/feature_economy_tiny_bundle")
+          rows = list(csv.DictReader(manifest_path.open()))
+          placeholder = "$" + "{ARTIFACT_ROOT}"
+          for row in rows:
+              row["export_status"] = "READY"
+              row["source_artifact_dir"] = str(
+                  artifact_root / row["public_artifact_dir"].replace(placeholder + "/", "")
+              )
+          with manifest_path.open("w", newline="") as f:
+              writer = csv.DictWriter(f, fieldnames=rows[0].keys())
+              writer.writeheader()
+              writer.writerows(rows)
+          PY
+          bash scripts/stage_artifact_bundle_from_manifest.sh \
+            --manifest-csv /tmp/feature_economy_tiny_stage_plan/export_manifest.csv \
+            --run-plan-json /tmp/feature_economy_tiny_bundle/run_plan/tiny_dino_imagenet_run_plan.json \
+            --artifact-root /tmp/feature_economy_tiny_staged_bundle \
+            --release-output-dir /tmp/feature_economy_tiny_stage_release_assets \
+            --bundle-name feature_economy_tiny_staged_bundle \
+            --public-repo-commit ci \
+            --force
+          test -f /tmp/feature_economy_tiny_staged_bundle/README.md
+          tar -tzf /tmp/feature_economy_tiny_stage_release_assets/feature_economy_tiny_staged_bundle.tar.gz \
+            | grep 'feature_economy_tiny_staged_bundle/README.md'
+
+      - name: Package tiny artifact release asset
+        run: |
+          bash scripts/package_artifact_bundle.sh \
+            --artifact-root /tmp/feature_economy_tiny_bundle \
+            --run-plan-json /tmp/feature_economy_tiny_bundle/run_plan/tiny_dino_imagenet_run_plan.json \
+            --output-dir /tmp/feature_economy_release_assets \
+            --bundle-name feature_economy_tiny_bundle \
+            --force

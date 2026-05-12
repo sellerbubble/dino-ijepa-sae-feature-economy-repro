@@ -1,0 +1,7 @@
+id: paper_v0_native
+mode: native_probe
+seed: 42
+matrix:
+  models: [dino_v2_base, ijepa_vit_h14]
+  tasks: [imagenet_1k, nyuv2_depth, ade20k_segmentation, clevr_count]
+output_dir: ${ARTIFACT_ROOT}/paper_v0/native

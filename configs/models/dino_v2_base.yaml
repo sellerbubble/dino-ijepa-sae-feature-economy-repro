@@ -1,0 +1,16 @@
+id: dino_v2_base
+display_name: DINOv2-B/14
+provider: huggingface
+hf_name: facebook/dinov2-base
+architecture: vit
+patch_size: 14
+default_layers:
+  last: 11
+  second_last: 10
+output:
+  token_format: cls_registers_patches_or_cls_patches
+transform:
+  mode: shared_imagenet
+  resize: 256
+  crop: 224
+  normalize: imagenet

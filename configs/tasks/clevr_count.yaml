@@ -1,0 +1,11 @@
+id: clevr_count
+type: count_classification
+train_manifest: ${DATA_ROOT}/clevr_count/train_manifest.jsonl
+val_manifest: ${DATA_ROOT}/clevr_count/val_manifest.jsonl
+metrics:
+  primary: accuracy
+  report: [accuracy]
+readout:
+  type: linear_classifier
+  epochs: 20
+  batch_size: 512

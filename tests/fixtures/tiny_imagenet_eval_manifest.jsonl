@@ -1,0 +1,3 @@
+{"image": "images/imagenet_0001.jpg", "label": 0, "logits": [0.9, 0.1, 0.0], "split": "val"}
+{"image": "images/imagenet_0002.jpg", "label": 1, "logits": [0.1, 0.2, 0.7], "split": "val"}
+{"image": "images/imagenet_0003.jpg", "label": 2, "logits": [0.4, 0.5, 0.1], "split": "val"}
