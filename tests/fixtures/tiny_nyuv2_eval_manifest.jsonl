@@ -1,2 +1,0 @@
-{"image": "images/nyu_0001.jpg", "depth": "depth/nyu_0001.npy", "target_values": [[1.0, 1.0], [3.0, 2.0]], "prediction_values": [[1.0, 2.0], [3.0, 4.0]], "split": "val"}
-{"image": "images/nyu_0002.jpg", "depth": "depth/nyu_0002.npy", "target_values": [[2.0, 2.0], [4.0, 4.0]], "prediction_values": [[2.0, 2.0], [4.0, 5.0]], "split": "val"}

@@ -61,6 +61,23 @@ dump.
 Start with `docs/release_quickstart.md` for the 5-minute smoke path and the
 short real saved-array vertical slice.
 
+The first full saved-array artifact bundle is published as a split GitHub
+Release asset:
+
+```bash
+gh release download v1-saved-array-20260513 \
+  --repo sellerbubble/dino-ijepa-sae-feature-economy-repro \
+  --pattern 'feature_economy_artifacts_v1*'
+
+cat feature_economy_artifacts_v1.tar.gz.part-* > feature_economy_artifacts_v1.tar.gz
+sha256sum -c feature_economy_artifacts_v1.tar.gz.sha256
+tar -xzf feature_economy_artifacts_v1.tar.gz
+```
+
+The unpacked bundle contains the public v1 saved-array evidence chain:
+`66/66` run-plan rows complete, `190/190` indexed artifacts valid, and CSV
+tables for probe scores, Availability, Access, and Allocation.
+
 For the complete step-by-step paper-chain template, see
 `docs/canonical_chain_runbook.md`.
 

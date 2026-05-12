@@ -48,7 +48,54 @@ This builds one DINO/ImageNet SAE slice from tiny fixture arrays, then verifies:
 The tiny bundle is still not a scientific result. It is the smallest executable
 example of the public v1 artifact-first contract.
 
-## 3. Real Saved-Array Vertical Slice
+## 3. Download The Full Saved-Array Bundle
+
+The first public v1 scientific artifact bundle is distributed as split GitHub
+Release assets. Download every part and checksum file:
+
+```bash
+gh release download v1-saved-array-20260513 \
+  --repo sellerbubble/dino-ijepa-sae-feature-economy-repro \
+  --pattern 'feature_economy_artifacts_v1*'
+```
+
+Reassemble and verify:
+
+```bash
+cat feature_economy_artifacts_v1.tar.gz.part-* > feature_economy_artifacts_v1.tar.gz
+sha256sum -c feature_economy_artifacts_v1.tar.gz.sha256
+tar -xzf feature_economy_artifacts_v1.tar.gz
+export ARTIFACT_ROOT=$PWD/feature_economy_artifacts_v1
+export PYTHONPATH=$PWD/src
+```
+
+Then verify the unpacked bundle and regenerate public tables:
+
+```bash
+python -m feature_economy.cli.main check-bundle \
+  --run-plan-json "$ARTIFACT_ROOT/run_plan/reproduction_run_plan.json" \
+  --artifact-root "$ARTIFACT_ROOT" \
+  --output-json "$ARTIFACT_ROOT/run_plan/artifact_bundle_check_local.json" \
+  --require-complete
+
+python -m feature_economy.cli.main index-artifacts \
+  --input-dir "$ARTIFACT_ROOT" \
+  --output-json "$ARTIFACT_ROOT/index/artifact_index_local.json" \
+  --output-csv "$ARTIFACT_ROOT/index/artifact_index_local.csv" \
+  --require-valid
+
+python -m feature_economy.cli.main make-tables \
+  --artifact-index "$ARTIFACT_ROOT/index/artifact_index_local.json" \
+  --output-dir "$ARTIFACT_ROOT/tables_local"
+```
+
+Expected current public v1 status:
+
+- `66/66` run-plan rows complete;
+- `190/190` indexed artifacts valid;
+- generated tables for probe scores, Availability, Access, and Allocation.
+
+## 4. Real Saved-Array Vertical Slice
 
 The public alpha is artifact-first. To reproduce the scientific chain, provide
 real manifests, native feature arrays, SAE checkpoints, and dense targets.
@@ -226,7 +273,7 @@ python -m feature_economy.cli.main make-figures \
   --formats png,pdf
 ```
 
-## 4. What This Does Not Claim
+## 5. What This Does Not Claim
 
 This quickstart does not reproduce private paper-scale training loops from raw
 datasets. It reproduces the public saved-array/lightweight analysis chain. See
