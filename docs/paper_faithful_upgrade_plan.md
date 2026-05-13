@@ -230,9 +230,9 @@ keeping lightweight probes for `smoke`.
 
 Status:
 
-- Started for classification/counting saved-array probes through the public
-  `paper-scale-torch` backend.
-- Dense-depth and dense-segmentation decoder trainers remain pending.
+- Started for classification/counting and dense-depth saved-array probes
+  through the public `paper-scale-torch` backend.
+- Dense-segmentation decoder trainers remain pending.
 - The full-profile launcher should switch defaults only after all four task
   families have paper-scale backends.
 

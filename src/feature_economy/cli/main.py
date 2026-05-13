@@ -435,7 +435,20 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help="Dense target array for --backend linear-probe depth/segmentation.",
     )
+    probe_native.add_argument(
+        "--train-targets-npz",
+        type=Path,
+        default=None,
+        help="Train dense targets for --backend paper-scale-torch.",
+    )
+    probe_native.add_argument(
+        "--val-targets-npz",
+        type=Path,
+        default=None,
+        help="Validation dense targets for --backend paper-scale-torch.",
+    )
     probe_native.add_argument("--target-key", default="targets")
+    probe_native.add_argument("--decoder-hidden-channels", type=int, default=256)
     probe_sae = subparsers.add_parser(
         "probe-sae",
         help="Run the public SAE-code probe interface.",
@@ -513,7 +526,20 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help="Dense target array for --backend linear-probe depth/segmentation.",
     )
+    probe_sae.add_argument(
+        "--train-targets-npz",
+        type=Path,
+        default=None,
+        help="Train dense targets for --backend paper-scale-torch.",
+    )
+    probe_sae.add_argument(
+        "--val-targets-npz",
+        type=Path,
+        default=None,
+        help="Validation dense targets for --backend paper-scale-torch.",
+    )
     probe_sae.add_argument("--target-key", default="targets")
+    probe_sae.add_argument("--decoder-hidden-channels", type=int, default=256)
     extract_features = subparsers.add_parser(
         "extract-features",
         help=(
@@ -1099,6 +1125,10 @@ def main() -> int:
                 lr=args.lr,
                 weight_decay=args.weight_decay,
                 device=args.device,
+                train_targets_npz=args.train_targets_npz,
+                val_targets_npz=args.val_targets_npz or args.targets_npz,
+                target_key=args.target_key,
+                decoder_hidden_channels=args.decoder_hidden_channels,
             )
         else:
             parser.error(f"unsupported probe-native backend: {args.backend}")
@@ -1173,6 +1203,10 @@ def main() -> int:
                 lr=args.lr,
                 weight_decay=args.weight_decay,
                 device=args.device,
+                train_targets_npz=args.train_targets_npz,
+                val_targets_npz=args.val_targets_npz or args.targets_npz,
+                target_key=args.target_key,
+                decoder_hidden_channels=args.decoder_hidden_channels,
             )
         else:
             parser.error(f"unsupported probe-sae backend: {args.backend}")

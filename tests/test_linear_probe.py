@@ -137,6 +137,67 @@ class LinearProbeTests(unittest.TestCase):
             probe = np.load(tmpdir / "probe" / "probe_outputs.npz")
             self.assertEqual(probe["weights"].shape[0], codes.shape[-1] + 1)
 
+    @unittest.skipUnless(HAS_TORCH, "paper-scale torch probe tests require PyTorch")
+    def test_train_native_paper_scale_probe_dense_depth(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmpdir = Path(tmpdir)
+            train_features_path = tmpdir / "train_features.npz"
+            val_features_path = tmpdir / "val_features.npz"
+            train_targets_path = tmpdir / "train_targets.npz"
+            val_targets_path = tmpdir / "val_targets.npz"
+            train_manifest_path = tmpdir / "train_manifest.jsonl"
+            val_manifest_path = tmpdir / "val_manifest.jsonl"
+            targets = np.asarray(
+                [
+                    [[1.0, 1.2], [1.4, 1.6]],
+                    [[1.5, 1.7], [1.9, 2.1]],
+                ],
+                dtype=np.float32,
+            )
+            features = np.stack([targets, targets * 0.5], axis=-1).astype(np.float32)
+            np.savez(train_features_path, features=features)
+            np.savez(val_features_path, features=features)
+            np.savez(train_targets_path, targets=targets)
+            np.savez(val_targets_path, targets=targets)
+            train_rows = [
+                {"image": "a.jpg", "depth": "a.npy", "split": "train"},
+                {"image": "b.jpg", "depth": "b.npy", "split": "train"},
+            ]
+            val_rows = [{**row, "split": "val"} for row in train_rows]
+            train_manifest_path.write_text(
+                "\n".join(json.dumps(row) for row in train_rows) + "\n",
+                encoding="utf-8",
+            )
+            val_manifest_path.write_text(
+                "\n".join(json.dumps(row) for row in val_rows) + "\n",
+                encoding="utf-8",
+            )
+            summary_path = train_native_paper_scale_probe(
+                train_features_npz=train_features_path,
+                train_manifest_path=train_manifest_path,
+                val_features_npz=val_features_path,
+                val_manifest_path=val_manifest_path,
+                task_type="dense_depth",
+                task_id="tiny_depth",
+                model_id="dino_v2_base",
+                output_dir=tmpdir / "probe",
+                train_targets_npz=train_targets_path,
+                val_targets_npz=val_targets_path,
+                epochs=2,
+                batch_size=1,
+                lr=0.01,
+                decoder_hidden_channels=4,
+                device="cpu",
+            )
+            record = json.loads(summary_path.read_text())
+            validate_probe_summary(record)
+            self.assertEqual(record["backend"], "paper_scale_torch")
+            self.assertEqual(record["selection"]["checkpoint_rule"], "best_validation_rmse")
+            self.assertIn("rmse", record["metrics"])
+            probe = np.load(tmpdir / "probe" / "probe_outputs.npz")
+            self.assertEqual(probe["prediction"].shape, targets.shape)
+            self.assertEqual(probe["weights"].shape[0], features.shape[-1] + 1)
+
     def test_train_sae_linear_probe_classification(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             tmpdir = Path(tmpdir)
