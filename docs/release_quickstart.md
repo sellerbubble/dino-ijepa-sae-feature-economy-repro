@@ -76,6 +76,13 @@ Use the dry run first to inspect every command and output path. The manual
 commands below are the expanded version of the same chain for users who need to
 customize individual stages.
 
+`scripts/run_full_profile.sh` defaults to the paper-style probe path:
+`PROBE_BACKEND=paper-scale-torch`. This extracts train and validation
+features/codes, trains AdamW probes for the native and SAE-code spaces, and
+uses validation metrics for checkpoint selection. For quick diagnostics or very
+small machines, set `PROBE_BACKEND=linear-probe` to use the older closed-form
+saved-array probe path.
+
 If the GPU machine cannot reach HuggingFace, pre-download the DINO checkpoint
 elsewhere and pass its local directory:
 
@@ -105,10 +112,10 @@ For the classification vertical slice, contribution scoring defaults to the
 scalable `true_class_logit_drop` method. To run a small exact audit instead, set
 `CONTRIBUTION_SCORING_METHOD=exact_metric_drop`.
 
-The same launcher now includes NYUv2 dense-depth vertical slices. A NYUv2
-manifest should live at `$DATA_ROOT/nyuv2/val_manifest.jsonl` and include
-`image`, `depth`, and `split` fields. Dense profiles export aligned
-`targets.npz` automatically:
+The same launcher now includes NYUv2 dense-depth vertical slices. NYUv2
+manifests should live at `$DATA_ROOT/nyuv2/train_manifest.jsonl` and
+`$DATA_ROOT/nyuv2/val_manifest.jsonl` and include `image`, `depth`, and `split`
+fields. Dense profiles export aligned `targets.npz` automatically:
 
 ```bash
 export DINO_HF_NAME_OR_PATH=/path/to/facebook/dinov2-base
@@ -116,9 +123,10 @@ export LOCAL_FILES_ONLY=1
 bash scripts/run_full_profile.sh dino_nyuv2_l11
 ```
 
-The same launcher also includes ADE20K dense-segmentation vertical slices. An
-ADE20K manifest should live at `$DATA_ROOT/ade20k/val_manifest.jsonl` and
-include `image`, `segmentation`, and `split` fields. Official ADE20K masks are
+The same launcher also includes ADE20K dense-segmentation vertical slices.
+ADE20K manifests should live at `$DATA_ROOT/ade20k/train_manifest.jsonl` and
+`$DATA_ROOT/ade20k/val_manifest.jsonl` and include `image`, `segmentation`, and
+`split` fields. Official ADE20K masks are
 remapped from `0` ignore/background plus `1..150` classes into the public probe
 convention `255` ignore plus `0..149` classes:
 

@@ -18,6 +18,13 @@ DEVICE="${DEVICE:-cuda}"
 BATCH_SIZE="${BATCH_SIZE:-16}"
 DTYPE="${DTYPE:-float32}"
 RIDGE="${RIDGE:-0.001}"
+PROBE_BACKEND="${PROBE_BACKEND:-paper-scale-torch}"
+PROBE_EPOCHS="${PROBE_EPOCHS:-20}"
+PROBE_BATCH_SIZE="${PROBE_BATCH_SIZE:-512}"
+PROBE_LR="${PROBE_LR:-0.001}"
+PROBE_WEIGHT_DECAY="${PROBE_WEIGHT_DECAY:-0.0001}"
+DECODER_HIDDEN_CHANNELS="${DECODER_HIDDEN_CHANNELS:-256}"
+TARGET_KEY="${TARGET_KEY:-targets}"
 MAX_EXAMPLES="${MAX_EXAMPLES:-}"
 LOCAL_FILES_ONLY="${LOCAL_FILES_ONLY:-0}"
 MAKE_FIGURES="${MAKE_FIGURES:-1}"
@@ -39,7 +46,14 @@ Environment:
   DEVICE=cuda           Feature extraction device.
   BATCH_SIZE=16         Feature extraction batch size.
   DTYPE=float32         Feature dtype: float16 or float32.
-  RIDGE=0.001           Closed-form probe ridge value.
+  PROBE_BACKEND=paper-scale-torch
+                         Full rerun default. Use linear-probe for lightweight diagnostics.
+  RIDGE=0.001           Closed-form probe ridge value when PROBE_BACKEND=linear-probe.
+  PROBE_EPOCHS=20       Paper-scale torch probe epochs.
+  PROBE_BATCH_SIZE=512  Paper-scale torch probe batch size.
+  PROBE_LR=0.001        Paper-scale torch probe learning rate.
+  PROBE_WEIGHT_DECAY=0.0001
+  DECODER_HIDDEN_CHANNELS=256
   MAX_EXAMPLES=1000     Optional small real-data slice.
   LOCAL_FILES_ONLY=1    Pass --local-files-only to HuggingFace extraction.
   DINO_HF_NAME_OR_PATH  Optional local DINO checkpoint directory or HF model id.
@@ -88,6 +102,11 @@ if [[ "$PROFILE" != "dino_imagenet_l11" \
   usage >&2
   exit 2
 fi
+if [[ "$PROBE_BACKEND" != "paper-scale-torch" && "$PROBE_BACKEND" != "linear-probe" ]]; then
+  echo "Unsupported PROBE_BACKEND: $PROBE_BACKEND" >&2
+  echo "Use PROBE_BACKEND=paper-scale-torch or PROBE_BACKEND=linear-probe." >&2
+  exit 2
+fi
 
 if [[ "$DRY_RUN" != "1" ]]; then
   for name in DATA_ROOT SAE_ROOT ARTIFACT_ROOT; do
@@ -103,7 +122,9 @@ DATA_ROOT="${DATA_ROOT:-/path/to/manifests}"
 SAE_ROOT="${SAE_ROOT:-/path/to/sae_checkpoints}"
 ARTIFACT_ROOT="${ARTIFACT_ROOT:-/path/to/output_artifacts}"
 
-SPLIT="val"
+TRAIN_SPLIT="train"
+VAL_SPLIT="val"
+SPLIT="$VAL_SPLIT"
 NUM_CLASSES="${NUM_CLASSES:-}"
 IGNORE_INDEX="${IGNORE_INDEX:-}"
 SEGMENTATION_IGNORE_VALUE="${SEGMENTATION_IGNORE_VALUE:-}"
@@ -112,20 +133,26 @@ case "$PROFILE" in
   dino_imagenet_l11|ijepa_imagenet_l31)
     TASK_ID="imagenet_1k"
     TASK_TYPE="classification"
-    TASK_SLUG="imagenet_val"
-    MANIFEST="$DATA_ROOT/imagenet/val_manifest.jsonl"
+    TRAIN_TASK_SLUG="imagenet_train"
+    VAL_TASK_SLUG="imagenet_val"
+    TRAIN_MANIFEST="$DATA_ROOT/imagenet/train_manifest.jsonl"
+    VAL_MANIFEST="$DATA_ROOT/imagenet/val_manifest.jsonl"
     ;;
   dino_nyuv2_l11|ijepa_nyuv2_l31)
     TASK_ID="nyuv2_depth"
     TASK_TYPE="dense_depth"
-    TASK_SLUG="nyuv2_val"
-    MANIFEST="$DATA_ROOT/nyuv2/val_manifest.jsonl"
+    TRAIN_TASK_SLUG="nyuv2_train"
+    VAL_TASK_SLUG="nyuv2_val"
+    TRAIN_MANIFEST="$DATA_ROOT/nyuv2/train_manifest.jsonl"
+    VAL_MANIFEST="$DATA_ROOT/nyuv2/val_manifest.jsonl"
     ;;
   dino_ade20k_l11|ijepa_ade20k_l31)
     TASK_ID="ade20k_segmentation"
     TASK_TYPE="dense_segmentation"
-    TASK_SLUG="ade20k_val"
-    MANIFEST="$DATA_ROOT/ade20k/val_manifest.jsonl"
+    TRAIN_TASK_SLUG="ade20k_train"
+    VAL_TASK_SLUG="ade20k_val"
+    TRAIN_MANIFEST="$DATA_ROOT/ade20k/train_manifest.jsonl"
+    VAL_MANIFEST="$DATA_ROOT/ade20k/val_manifest.jsonl"
     NUM_CLASSES="${NUM_CLASSES:-150}"
     IGNORE_INDEX="${IGNORE_INDEX:-255}"
     # Official ADE20K annotations use 0 for background/ignore and 1..150
@@ -136,22 +163,28 @@ case "$PROFILE" in
   dino_clevr_count_l11|ijepa_clevr_count_l31)
     TASK_ID="clevr_count"
     TASK_TYPE="count_classification"
-    TASK_SLUG="clevr_count_val"
-    MANIFEST="$DATA_ROOT/clevr_count/val_manifest.jsonl"
+    TRAIN_TASK_SLUG="clevr_count_train"
+    VAL_TASK_SLUG="clevr_count_val"
+    TRAIN_MANIFEST="$DATA_ROOT/clevr_count/train_manifest.jsonl"
+    VAL_MANIFEST="$DATA_ROOT/clevr_count/val_manifest.jsonl"
     ;;
 esac
+TASK_SLUG="$VAL_TASK_SLUG"
+MANIFEST="$VAL_MANIFEST"
 
 if [[ "$PROFILE" == "dino_imagenet_l11" || "$PROFILE" == "dino_nyuv2_l11" || "$PROFILE" == "dino_ade20k_l11" || "$PROFILE" == "dino_clevr_count_l11" ]]; then
   MODEL_ID="dino_v2_base"
   SAE_ID="dino_l11_topk32_exp4"
   LAYER="11"
   FEATURE_BACKEND="huggingface"
-  FEATURE_DIR="$ARTIFACT_ROOT/features/$MODEL_ID/${TASK_SLUG}_l11"
+  TRAIN_FEATURE_DIR="$ARTIFACT_ROOT/features/$MODEL_ID/${TRAIN_TASK_SLUG}_l11"
+  VAL_FEATURE_DIR="$ARTIFACT_ROOT/features/$MODEL_ID/${VAL_TASK_SLUG}_l11"
 elif [[ "$PROFILE" == "ijepa_imagenet_l31" || "$PROFILE" == "ijepa_nyuv2_l31" || "$PROFILE" == "ijepa_ade20k_l31" || "$PROFILE" == "ijepa_clevr_count_l31" ]]; then
   MODEL_ID="ijepa_vit_h14"
   SAE_ID="ijepa_l31_topk32_exp4"
   LAYER="31"
-  FEATURE_DIR="$ARTIFACT_ROOT/features/$MODEL_ID/${TASK_SLUG}_l31"
+  TRAIN_FEATURE_DIR="$ARTIFACT_ROOT/features/$MODEL_ID/${TRAIN_TASK_SLUG}_l31"
+  VAL_FEATURE_DIR="$ARTIFACT_ROOT/features/$MODEL_ID/${VAL_TASK_SLUG}_l31"
   if [[ -n "${IJEPA_HF_NAME_OR_PATH:-}" ]]; then
     FEATURE_BACKEND="huggingface"
   else
@@ -164,6 +197,7 @@ elif [[ "$PROFILE" == "ijepa_imagenet_l31" || "$PROFILE" == "ijepa_nyuv2_l31" ||
     IJEPA_TORCHSCRIPT_CHECKPOINT="${IJEPA_TORCHSCRIPT_CHECKPOINT:-/path/to/ijepa_l31_feature_module.pt}"
   fi
 fi
+FEATURE_DIR="$VAL_FEATURE_DIR"
 if [[ "$CONTRIBUTION_SCORING_METHOD" == "auto" ]]; then
   if [[ "$TASK_TYPE" == "classification" || "$TASK_TYPE" == "count_classification" ]]; then
     CONTRIBUTION_SCORING_METHOD="true_class_logit_drop"
@@ -175,7 +209,11 @@ SEGMENTATION_LABEL_OFFSET="${SEGMENTATION_LABEL_OFFSET:-0}"
 SAE_CHECKPOINT="$SAE_ROOT/$SAE_ID/final_sae.pt"
 LIGHTWEIGHT_SAE="$ARTIFACT_ROOT/checkpoints/${SAE_ID}_lightweight.npz"
 CODES_DIR="$ARTIFACT_ROOT/codes/$SAE_ID/$TASK_SLUG"
+TRAIN_CODES_DIR="$ARTIFACT_ROOT/codes/$SAE_ID/$TRAIN_TASK_SLUG"
+VAL_CODES_DIR="$ARTIFACT_ROOT/codes/$SAE_ID/$VAL_TASK_SLUG"
 TARGET_DIR="$ARTIFACT_ROOT/targets/$TASK_ID/$SPLIT"
+TRAIN_TARGET_DIR="$ARTIFACT_ROOT/targets/$TASK_ID/$TRAIN_SPLIT"
+VAL_TARGET_DIR="$ARTIFACT_ROOT/targets/$TASK_ID/$VAL_SPLIT"
 NATIVE_PROBE_DIR="$ARTIFACT_ROOT/probes/native/$MODEL_ID/$TASK_SLUG"
 SAE_PROBE_DIR="$ARTIFACT_ROOT/probes/sae/$SAE_ID/$TASK_SLUG"
 AVAILABILITY_DIR="$ARTIFACT_ROOT/analysis/availability/$SAE_ID/$TASK_SLUG"
@@ -229,8 +267,11 @@ torchscript_optional_args+=(--output-index "$TORCHSCRIPT_OUTPUT_INDEX")
 run mkdir -p \
   "$ARTIFACT_ROOT/run_plan" \
   "$ARTIFACT_ROOT/checkpoints" \
+  "$TRAIN_FEATURE_DIR" \
   "$FEATURE_DIR" \
+  "$TRAIN_CODES_DIR" \
   "$CODES_DIR" \
+  "$TRAIN_TARGET_DIR" \
   "$TARGET_DIR" \
   "$NATIVE_PROBE_DIR" \
   "$SAE_PROBE_DIR" \
@@ -266,49 +307,66 @@ run python -m feature_economy.cli.main check-manifest \
   --task-type "$TASK_TYPE" \
   --expected-split "$SPLIT"
 
-if [[ "$FEATURE_BACKEND" == "huggingface" && ${#optional_args[@]} -gt 0 ]]; then
-  run python -m feature_economy.cli.main extract-features \
-    --config-root "$CONFIG_ROOT" \
-    --backend huggingface \
-    --manifest "$MANIFEST" \
+if [[ "$PROBE_BACKEND" == "paper-scale-torch" ]]; then
+  run python -m feature_economy.cli.main check-manifest \
+    --manifest "$TRAIN_MANIFEST" \
     --task-type "$TASK_TYPE" \
-    --model-id "$MODEL_ID" \
-    --layer "$LAYER" \
-    --expected-split "$SPLIT" \
-    --batch-size "$BATCH_SIZE" \
-    --device "$DEVICE" \
-    --dtype "$DTYPE" \
-    --output-dir "$FEATURE_DIR" \
-    "${optional_args[@]}"
-elif [[ "$FEATURE_BACKEND" == "huggingface" ]]; then
-  run python -m feature_economy.cli.main extract-features \
-    --config-root "$CONFIG_ROOT" \
-    --backend huggingface \
-    --manifest "$MANIFEST" \
-    --task-type "$TASK_TYPE" \
-    --model-id "$MODEL_ID" \
-    --layer "$LAYER" \
-    --expected-split "$SPLIT" \
-    --batch-size "$BATCH_SIZE" \
-    --device "$DEVICE" \
-    --dtype "$DTYPE" \
-    --output-dir "$FEATURE_DIR"
-elif [[ "$FEATURE_BACKEND" == "torchscript" ]]; then
-  run python -m feature_economy.cli.main extract-features \
-    --config-root "$CONFIG_ROOT" \
-    --backend torchscript \
-    --checkpoint "$IJEPA_TORCHSCRIPT_CHECKPOINT" \
-    --manifest "$MANIFEST" \
-    --task-type "$TASK_TYPE" \
-    --model-id "$MODEL_ID" \
-    --layer "$LAYER" \
-    --expected-split "$SPLIT" \
-    --batch-size "$BATCH_SIZE" \
-    --device "$DEVICE" \
-    --dtype "$DTYPE" \
-    --output-dir "$FEATURE_DIR" \
-    "${torchscript_optional_args[@]}"
+    --expected-split "$TRAIN_SPLIT"
 fi
+
+extract_features_split() {
+  local split="$1"
+  local manifest="$2"
+  local output_dir="$3"
+  if [[ "$FEATURE_BACKEND" == "huggingface" && ${#optional_args[@]} -gt 0 ]]; then
+    run python -m feature_economy.cli.main extract-features \
+      --config-root "$CONFIG_ROOT" \
+      --backend huggingface \
+      --manifest "$manifest" \
+      --task-type "$TASK_TYPE" \
+      --model-id "$MODEL_ID" \
+      --layer "$LAYER" \
+      --expected-split "$split" \
+      --batch-size "$BATCH_SIZE" \
+      --device "$DEVICE" \
+      --dtype "$DTYPE" \
+      --output-dir "$output_dir" \
+      "${optional_args[@]}"
+  elif [[ "$FEATURE_BACKEND" == "huggingface" ]]; then
+    run python -m feature_economy.cli.main extract-features \
+      --config-root "$CONFIG_ROOT" \
+      --backend huggingface \
+      --manifest "$manifest" \
+      --task-type "$TASK_TYPE" \
+      --model-id "$MODEL_ID" \
+      --layer "$LAYER" \
+      --expected-split "$split" \
+      --batch-size "$BATCH_SIZE" \
+      --device "$DEVICE" \
+      --dtype "$DTYPE" \
+      --output-dir "$output_dir"
+  elif [[ "$FEATURE_BACKEND" == "torchscript" ]]; then
+    run python -m feature_economy.cli.main extract-features \
+      --config-root "$CONFIG_ROOT" \
+      --backend torchscript \
+      --checkpoint "$IJEPA_TORCHSCRIPT_CHECKPOINT" \
+      --manifest "$manifest" \
+      --task-type "$TASK_TYPE" \
+      --model-id "$MODEL_ID" \
+      --layer "$LAYER" \
+      --expected-split "$split" \
+      --batch-size "$BATCH_SIZE" \
+      --device "$DEVICE" \
+      --dtype "$DTYPE" \
+      --output-dir "$output_dir" \
+      "${torchscript_optional_args[@]}"
+  fi
+}
+
+if [[ "$PROBE_BACKEND" == "paper-scale-torch" ]]; then
+  extract_features_split "$TRAIN_SPLIT" "$TRAIN_MANIFEST" "$TRAIN_FEATURE_DIR"
+fi
+extract_features_split "$VAL_SPLIT" "$VAL_MANIFEST" "$VAL_FEATURE_DIR"
 
 run python -m feature_economy.cli.main validate-arrays \
   --npz "$FEATURE_DIR/features.npz" \
@@ -317,41 +375,85 @@ run python -m feature_economy.cli.main validate-arrays \
   --manifest "$MANIFEST" \
   --expected-split "$SPLIT"
 
-probe_target_args=()
+if [[ "$PROBE_BACKEND" == "paper-scale-torch" ]]; then
+  run python -m feature_economy.cli.main validate-arrays \
+    --npz "$TRAIN_FEATURE_DIR/features.npz" \
+    --kind features \
+    --task-type "$TASK_TYPE" \
+    --manifest "$TRAIN_MANIFEST" \
+    --expected-split "$TRAIN_SPLIT"
+fi
+
+linear_probe_target_args=()
+paper_probe_target_args=(--target-key "$TARGET_KEY")
 if [[ "$TASK_TYPE" == "dense_depth" || "$TASK_TYPE" == "dense_segmentation" ]]; then
-  export_target_args=(
-    --manifest "$MANIFEST"
-    --task-type "$TASK_TYPE"
-    --expected-split "$SPLIT"
-    --features-npz "$FEATURE_DIR/features.npz"
-    --output-dir "$TARGET_DIR"
+  export_targets_split() {
+    local split="$1"
+    local manifest="$2"
+    local feature_dir="$3"
+    local target_dir="$4"
+    export_target_args=(
+      --manifest "$manifest"
+      --task-type "$TASK_TYPE"
+      --expected-split "$split"
+      --features-npz "$feature_dir/features.npz"
+      --output-dir "$target_dir"
+    )
+    if [[ "$TASK_TYPE" == "dense_segmentation" ]]; then
+      export_target_args+=(
+        --segmentation-output-ignore-index "$IGNORE_INDEX"
+        --segmentation-label-offset "$SEGMENTATION_LABEL_OFFSET"
+      )
+      if [[ -n "$SEGMENTATION_IGNORE_VALUE" ]]; then
+        export_target_args+=(--segmentation-ignore-value "$SEGMENTATION_IGNORE_VALUE")
+      fi
+    fi
+    run python -m feature_economy.cli.main export-targets \
+      "${export_target_args[@]}"
+    run python -m feature_economy.cli.main validate-arrays \
+      --npz "$target_dir/targets.npz" \
+      --kind targets \
+      --task-type "$TASK_TYPE" \
+      --manifest "$manifest" \
+      --expected-split "$split"
+  }
+  if [[ "$PROBE_BACKEND" == "paper-scale-torch" ]]; then
+    export_targets_split "$TRAIN_SPLIT" "$TRAIN_MANIFEST" "$TRAIN_FEATURE_DIR" "$TRAIN_TARGET_DIR"
+  fi
+  export_targets_split "$VAL_SPLIT" "$VAL_MANIFEST" "$VAL_FEATURE_DIR" "$VAL_TARGET_DIR"
+
+  linear_probe_target_args=(--targets-npz "$VAL_TARGET_DIR/targets.npz")
+  paper_probe_target_args=(
+    --target-key "$TARGET_KEY"
+    --train-targets-npz "$TRAIN_TARGET_DIR/targets.npz"
+    --val-targets-npz "$VAL_TARGET_DIR/targets.npz"
   )
   if [[ "$TASK_TYPE" == "dense_segmentation" ]]; then
-    export_target_args+=(
-      --segmentation-output-ignore-index "$IGNORE_INDEX"
-      --segmentation-label-offset "$SEGMENTATION_LABEL_OFFSET"
-    )
-    if [[ -n "$SEGMENTATION_IGNORE_VALUE" ]]; then
-      export_target_args+=(--segmentation-ignore-value "$SEGMENTATION_IGNORE_VALUE")
-    fi
-  fi
-  run python -m feature_economy.cli.main export-targets \
-    "${export_target_args[@]}"
-
-  run python -m feature_economy.cli.main validate-arrays \
-    --npz "$TARGET_DIR/targets.npz" \
-    --kind targets \
-    --task-type "$TASK_TYPE" \
-    --manifest "$MANIFEST" \
-    --expected-split "$SPLIT"
-
-  probe_target_args=(--targets-npz "$TARGET_DIR/targets.npz")
-  if [[ "$TASK_TYPE" == "dense_segmentation" ]]; then
-    probe_target_args+=(--num-classes "$NUM_CLASSES" --ignore-index "$IGNORE_INDEX")
+    linear_probe_target_args+=(--num-classes "$NUM_CLASSES" --ignore-index "$IGNORE_INDEX")
+    paper_probe_target_args+=(--num-classes "$NUM_CLASSES" --ignore-index "$IGNORE_INDEX")
   fi
 fi
 
-if [[ ${#probe_target_args[@]} -gt 0 ]]; then
+if [[ "$PROBE_BACKEND" == "paper-scale-torch" ]]; then
+  run python -m feature_economy.cli.main probe-native \
+    --backend paper-scale-torch \
+    --train-features-npz "$TRAIN_FEATURE_DIR/features.npz" \
+    --val-features-npz "$VAL_FEATURE_DIR/features.npz" \
+    --train-manifest "$TRAIN_MANIFEST" \
+    --val-manifest "$VAL_MANIFEST" \
+    --task-type "$TASK_TYPE" \
+    --task-id "$TASK_ID" \
+    --model-id "$MODEL_ID" \
+    --expected-split "$VAL_SPLIT" \
+    --epochs "$PROBE_EPOCHS" \
+    --batch-size "$PROBE_BATCH_SIZE" \
+    --lr "$PROBE_LR" \
+    --weight-decay "$PROBE_WEIGHT_DECAY" \
+    --decoder-hidden-channels "$DECODER_HIDDEN_CHANNELS" \
+    --device "$DEVICE" \
+    "${paper_probe_target_args[@]}" \
+    --output-dir "$NATIVE_PROBE_DIR"
+elif [[ ${#linear_probe_target_args[@]} -gt 0 ]]; then
   run python -m feature_economy.cli.main probe-native \
     --backend linear-probe \
     --features-npz "$FEATURE_DIR/features.npz" \
@@ -361,7 +463,7 @@ if [[ ${#probe_target_args[@]} -gt 0 ]]; then
     --model-id "$MODEL_ID" \
     --expected-split "$SPLIT" \
     --ridge "$RIDGE" \
-    "${probe_target_args[@]}" \
+    "${linear_probe_target_args[@]}" \
     --output-dir "$NATIVE_PROBE_DIR"
 else
   run python -m feature_economy.cli.main probe-native \
@@ -380,14 +482,23 @@ run python -m feature_economy.cli.main convert-sae-checkpoint \
   --input-checkpoint "$SAE_CHECKPOINT" \
   --output-checkpoint "$LIGHTWEIGHT_SAE"
 
-run python -m feature_economy.cli.main extract-sae-codes \
-  --config-root "$CONFIG_ROOT" \
-  --backend linear-topk \
-  --features-npz "$FEATURE_DIR/features.npz" \
-  --model-id "$MODEL_ID" \
-  --sae-id "$SAE_ID" \
-  --checkpoint "$LIGHTWEIGHT_SAE" \
-  --output-dir "$CODES_DIR"
+extract_codes_split() {
+  local feature_dir="$1"
+  local output_dir="$2"
+  run python -m feature_economy.cli.main extract-sae-codes \
+    --config-root "$CONFIG_ROOT" \
+    --backend linear-topk \
+    --features-npz "$feature_dir/features.npz" \
+    --model-id "$MODEL_ID" \
+    --sae-id "$SAE_ID" \
+    --checkpoint "$LIGHTWEIGHT_SAE" \
+    --output-dir "$output_dir"
+}
+
+if [[ "$PROBE_BACKEND" == "paper-scale-torch" ]]; then
+  extract_codes_split "$TRAIN_FEATURE_DIR" "$TRAIN_CODES_DIR"
+fi
+extract_codes_split "$VAL_FEATURE_DIR" "$VAL_CODES_DIR"
 
 run python -m feature_economy.cli.main validate-arrays \
   --npz "$CODES_DIR/codes.npz" \
@@ -396,7 +507,36 @@ run python -m feature_economy.cli.main validate-arrays \
   --manifest "$MANIFEST" \
   --expected-split "$SPLIT"
 
-if [[ ${#probe_target_args[@]} -gt 0 ]]; then
+if [[ "$PROBE_BACKEND" == "paper-scale-torch" ]]; then
+  run python -m feature_economy.cli.main validate-arrays \
+    --npz "$TRAIN_CODES_DIR/codes.npz" \
+    --kind codes \
+    --task-type "$TASK_TYPE" \
+    --manifest "$TRAIN_MANIFEST" \
+    --expected-split "$TRAIN_SPLIT"
+fi
+
+if [[ "$PROBE_BACKEND" == "paper-scale-torch" ]]; then
+  run python -m feature_economy.cli.main probe-sae \
+    --backend paper-scale-torch \
+    --train-codes-npz "$TRAIN_CODES_DIR/codes.npz" \
+    --val-codes-npz "$VAL_CODES_DIR/codes.npz" \
+    --train-manifest "$TRAIN_MANIFEST" \
+    --val-manifest "$VAL_MANIFEST" \
+    --task-type "$TASK_TYPE" \
+    --task-id "$TASK_ID" \
+    --model-id "$MODEL_ID" \
+    --sae-id "$SAE_ID" \
+    --expected-split "$VAL_SPLIT" \
+    --epochs "$PROBE_EPOCHS" \
+    --batch-size "$PROBE_BATCH_SIZE" \
+    --lr "$PROBE_LR" \
+    --weight-decay "$PROBE_WEIGHT_DECAY" \
+    --decoder-hidden-channels "$DECODER_HIDDEN_CHANNELS" \
+    --device "$DEVICE" \
+    "${paper_probe_target_args[@]}" \
+    --output-dir "$SAE_PROBE_DIR"
+elif [[ ${#linear_probe_target_args[@]} -gt 0 ]]; then
   run python -m feature_economy.cli.main probe-sae \
     --backend linear-probe \
     --codes-npz "$CODES_DIR/codes.npz" \
@@ -407,7 +547,7 @@ if [[ ${#probe_target_args[@]} -gt 0 ]]; then
     --sae-id "$SAE_ID" \
     --expected-split "$SPLIT" \
     --ridge "$RIDGE" \
-    "${probe_target_args[@]}" \
+    "${linear_probe_target_args[@]}" \
     --output-dir "$SAE_PROBE_DIR"
 else
   run python -m feature_economy.cli.main probe-sae \
@@ -510,12 +650,16 @@ task_id=$TASK_ID
 task_type=$TASK_TYPE
 feature_backend=$FEATURE_BACKEND
 contribution_scoring_method=$CONTRIBUTION_SCORING_METHOD
+probe_backend=$PROBE_BACKEND
+probe_epochs=$PROBE_EPOCHS
+probe_batch_size=$PROBE_BATCH_SIZE
 num_classes=$NUM_CLASSES
 ignore_index=$IGNORE_INDEX
 segmentation_ignore_value=$SEGMENTATION_IGNORE_VALUE
 segmentation_label_offset=$SEGMENTATION_LABEL_OFFSET
 artifact_root=$ARTIFACT_ROOT
-manifest=$MANIFEST
+train_manifest=$TRAIN_MANIFEST
+val_manifest=$VAL_MANIFEST
 sae_checkpoint=$SAE_CHECKPOINT
 layer=$LAYER
 EOF"

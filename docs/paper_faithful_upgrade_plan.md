@@ -232,9 +232,10 @@ Status:
 
 - Implemented for classification/counting, dense-depth, and dense-segmentation
   saved-array probes through the public `paper-scale-torch` backend.
-- The full-profile launcher still needs command-template updates before it
-  switches defaults, because dense tasks require train/validation targets in
-  addition to feature/code arrays.
+- `scripts/run_full_profile.sh` now defaults to `PROBE_BACKEND=paper-scale-torch`
+  and extracts train/validation features, targets, and SAE codes before native
+  and SAE-code probe training.
+- `PROBE_BACKEND=linear-probe` remains available for lightweight diagnostics.
 
 Deliverables:
 
