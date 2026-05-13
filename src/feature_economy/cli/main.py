@@ -366,7 +366,7 @@ def build_parser() -> argparse.ArgumentParser:
     probe_native.add_argument(
         "--backend",
         default="fixture",
-        choices=["fixture", "linear-probe"],
+        choices=["fixture", "linear-probe", "paper-scale-torch"],
         help="Native probe backend.",
     )
     probe_native.add_argument(
@@ -379,13 +379,37 @@ def build_parser() -> argparse.ArgumentParser:
         "--features-npz",
         type=Path,
         default=None,
-        help="Saved native features for --backend linear-probe.",
+        help="Saved native features for --backend linear-probe or val features for paper-scale.",
+    )
+    probe_native.add_argument(
+        "--train-features-npz",
+        type=Path,
+        default=None,
+        help="Saved train native features for --backend paper-scale-torch.",
+    )
+    probe_native.add_argument(
+        "--val-features-npz",
+        type=Path,
+        default=None,
+        help="Saved validation native features for --backend paper-scale-torch.",
     )
     probe_native.add_argument(
         "--manifest",
         type=Path,
         default=None,
-        help="Label manifest aligned with --features-npz for --backend linear-probe.",
+        help="Label manifest aligned with --features-npz for lightweight probes.",
+    )
+    probe_native.add_argument(
+        "--train-manifest",
+        type=Path,
+        default=None,
+        help="Train manifest for --backend paper-scale-torch.",
+    )
+    probe_native.add_argument(
+        "--val-manifest",
+        type=Path,
+        default=None,
+        help="Validation manifest for --backend paper-scale-torch.",
     )
     probe_native.add_argument(
         "--task-type",
@@ -400,6 +424,11 @@ def build_parser() -> argparse.ArgumentParser:
     probe_native.add_argument("--num-classes", type=int, default=None)
     probe_native.add_argument("--ignore-index", type=int, default=None)
     probe_native.add_argument("--ridge", type=float, default=1e-3)
+    probe_native.add_argument("--epochs", type=int, default=20)
+    probe_native.add_argument("--batch-size", type=int, default=512)
+    probe_native.add_argument("--lr", type=float, default=1e-3)
+    probe_native.add_argument("--weight-decay", type=float, default=1e-4)
+    probe_native.add_argument("--device", default="cpu")
     probe_native.add_argument(
         "--targets-npz",
         type=Path,
@@ -414,7 +443,7 @@ def build_parser() -> argparse.ArgumentParser:
     probe_sae.add_argument(
         "--backend",
         default="fixture",
-        choices=["fixture", "linear-probe"],
+        choices=["fixture", "linear-probe", "paper-scale-torch"],
         help="SAE probe backend.",
     )
     probe_sae.add_argument(
@@ -427,13 +456,37 @@ def build_parser() -> argparse.ArgumentParser:
         "--codes-npz",
         type=Path,
         default=None,
-        help="Saved SAE codes for --backend linear-probe.",
+        help="Saved SAE codes for --backend linear-probe or val codes for paper-scale.",
+    )
+    probe_sae.add_argument(
+        "--train-codes-npz",
+        type=Path,
+        default=None,
+        help="Saved train SAE codes for --backend paper-scale-torch.",
+    )
+    probe_sae.add_argument(
+        "--val-codes-npz",
+        type=Path,
+        default=None,
+        help="Saved validation SAE codes for --backend paper-scale-torch.",
     )
     probe_sae.add_argument(
         "--manifest",
         type=Path,
         default=None,
-        help="Label manifest aligned with --codes-npz for --backend linear-probe.",
+        help="Label manifest aligned with --codes-npz for lightweight probes.",
+    )
+    probe_sae.add_argument(
+        "--train-manifest",
+        type=Path,
+        default=None,
+        help="Train manifest for --backend paper-scale-torch.",
+    )
+    probe_sae.add_argument(
+        "--val-manifest",
+        type=Path,
+        default=None,
+        help="Validation manifest for --backend paper-scale-torch.",
     )
     probe_sae.add_argument(
         "--task-type",
@@ -449,6 +502,11 @@ def build_parser() -> argparse.ArgumentParser:
     probe_sae.add_argument("--num-classes", type=int, default=None)
     probe_sae.add_argument("--ignore-index", type=int, default=None)
     probe_sae.add_argument("--ridge", type=float, default=1e-3)
+    probe_sae.add_argument("--epochs", type=int, default=20)
+    probe_sae.add_argument("--batch-size", type=int, default=512)
+    probe_sae.add_argument("--lr", type=float, default=1e-3)
+    probe_sae.add_argument("--weight-decay", type=float, default=1e-4)
+    probe_sae.add_argument("--device", default="cpu")
     probe_sae.add_argument(
         "--targets-npz",
         type=Path,
@@ -1012,6 +1070,36 @@ def main() -> int:
                 num_classes=args.num_classes,
                 ignore_index=args.ignore_index,
             )
+        elif args.backend == "paper-scale-torch":
+            from feature_economy.probes import train_native_paper_scale_probe
+
+            train_features_npz = args.train_features_npz
+            val_features_npz = args.val_features_npz or args.features_npz
+            train_manifest = args.train_manifest
+            val_manifest = args.val_manifest or args.manifest
+            if train_features_npz is None or val_features_npz is None or train_manifest is None or val_manifest is None:
+                parser.error(
+                    "probe-native --backend paper-scale-torch requires "
+                    "--train-features-npz, --val-features-npz, --train-manifest, and --val-manifest"
+                )
+            summary_path = train_native_paper_scale_probe(
+                train_features_npz=train_features_npz,
+                train_manifest_path=train_manifest,
+                val_features_npz=val_features_npz,
+                val_manifest_path=val_manifest,
+                task_type=args.task_type,
+                task_id=args.task_id,
+                model_id=args.model_id,
+                output_dir=args.output_dir,
+                expected_train_split="train",
+                expected_val_split=args.expected_split or "val",
+                seed=args.seed,
+                epochs=args.epochs,
+                batch_size=args.batch_size,
+                lr=args.lr,
+                weight_decay=args.weight_decay,
+                device=args.device,
+            )
         else:
             parser.error(f"unsupported probe-native backend: {args.backend}")
         print(f"Wrote native probe summary to {summary_path}")
@@ -1054,6 +1142,37 @@ def main() -> int:
                 target_key=args.target_key,
                 num_classes=args.num_classes,
                 ignore_index=args.ignore_index,
+            )
+        elif args.backend == "paper-scale-torch":
+            from feature_economy.probes import train_sae_paper_scale_probe
+
+            train_codes_npz = args.train_codes_npz
+            val_codes_npz = args.val_codes_npz or args.codes_npz
+            train_manifest = args.train_manifest
+            val_manifest = args.val_manifest or args.manifest
+            if train_codes_npz is None or val_codes_npz is None or train_manifest is None or val_manifest is None:
+                parser.error(
+                    "probe-sae --backend paper-scale-torch requires "
+                    "--train-codes-npz, --val-codes-npz, --train-manifest, and --val-manifest"
+                )
+            summary_path = train_sae_paper_scale_probe(
+                train_codes_npz=train_codes_npz,
+                train_manifest_path=train_manifest,
+                val_codes_npz=val_codes_npz,
+                val_manifest_path=val_manifest,
+                task_type=args.task_type,
+                task_id=args.task_id,
+                model_id=args.model_id,
+                sae_id=args.sae_id,
+                output_dir=args.output_dir,
+                expected_train_split="train",
+                expected_val_split=args.expected_split or "val",
+                seed=args.seed,
+                epochs=args.epochs,
+                batch_size=args.batch_size,
+                lr=args.lr,
+                weight_decay=args.weight_decay,
+                device=args.device,
             )
         else:
             parser.error(f"unsupported probe-sae backend: {args.backend}")

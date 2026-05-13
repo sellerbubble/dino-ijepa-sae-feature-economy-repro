@@ -95,3 +95,19 @@ The first draft paper-scale recipes are:
 They are intentionally marked `draft_recipe`. The next implementation step is
 to port the torch training backends and then update these statuses as evidence
 accumulates.
+
+## Implementation Status
+
+As of 2026-05-13, the public codebase includes an initial
+`paper-scale-torch` backend for classification-style saved arrays:
+
+- native classification/counting probes over `features.npz`;
+- SAE-code classification/counting probes over `codes.npz`;
+- AdamW training for multiple epochs;
+- best validation checkpoint selection;
+- `probe.pt`, `probe_outputs.npz`, compatibility `probe_logits.npz`, and
+  `run_manifest.json` outputs.
+
+Dense-depth and dense-segmentation paper-scale decoder trainers are still
+pending. Until those are ported, the full-profile launcher must not globally
+switch from lightweight probes to paper-scale probes.
