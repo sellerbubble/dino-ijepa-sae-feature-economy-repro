@@ -1129,6 +1129,8 @@ def main() -> int:
                 val_targets_npz=args.val_targets_npz or args.targets_npz,
                 target_key=args.target_key,
                 decoder_hidden_channels=args.decoder_hidden_channels,
+                num_classes=args.num_classes,
+                ignore_index=args.ignore_index,
             )
         else:
             parser.error(f"unsupported probe-native backend: {args.backend}")
@@ -1207,6 +1209,8 @@ def main() -> int:
                 val_targets_npz=args.val_targets_npz or args.targets_npz,
                 target_key=args.target_key,
                 decoder_hidden_channels=args.decoder_hidden_channels,
+                num_classes=args.num_classes,
+                ignore_index=args.ignore_index,
             )
         else:
             parser.error(f"unsupported probe-sae backend: {args.backend}")

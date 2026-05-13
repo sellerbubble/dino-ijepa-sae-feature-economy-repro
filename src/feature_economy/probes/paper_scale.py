@@ -21,7 +21,7 @@ from .linear_probe import (
     _labels_to_int,
     _load_targets,
 )
-from .metrics import depth_metrics, topk_accuracy
+from .metrics import depth_metrics, segmentation_metrics, topk_accuracy
 
 
 def train_native_paper_scale_probe(
@@ -46,16 +46,19 @@ def train_native_paper_scale_probe(
     val_targets_npz: str | Path | None = None,
     target_key: str = "targets",
     decoder_hidden_channels: int = 256,
+    num_classes: int | None = None,
+    ignore_index: int | None = None,
 ) -> Path:
     """Train a torch paper-scale native probe on saved global features."""
 
-    if task_type == "dense_depth":
-        return _train_paper_scale_depth_probe(
+    if task_type in {"dense_depth", "dense_segmentation"}:
+        return _train_paper_scale_dense_probe(
             train_array_npz=train_features_npz,
             train_manifest_path=train_manifest_path,
             val_array_npz=val_features_npz,
             val_manifest_path=val_manifest_path,
             array_key="features",
+            task_type=task_type,
             task_id=task_id,
             model_id=model_id,
             sae_id=None,
@@ -72,6 +75,8 @@ def train_native_paper_scale_probe(
             val_targets_npz=val_targets_npz,
             target_key=target_key,
             decoder_hidden_channels=decoder_hidden_channels,
+            num_classes=num_classes,
+            ignore_index=ignore_index,
             record_type="native_probe_summary",
         )
     return _train_paper_scale_classification_probe(
@@ -120,16 +125,19 @@ def train_sae_paper_scale_probe(
     val_targets_npz: str | Path | None = None,
     target_key: str = "targets",
     decoder_hidden_channels: int = 256,
+    num_classes: int | None = None,
+    ignore_index: int | None = None,
 ) -> Path:
     """Train a torch paper-scale SAE-code probe on saved global codes."""
 
-    if task_type == "dense_depth":
-        return _train_paper_scale_depth_probe(
+    if task_type in {"dense_depth", "dense_segmentation"}:
+        return _train_paper_scale_dense_probe(
             train_array_npz=train_codes_npz,
             train_manifest_path=train_manifest_path,
             val_array_npz=val_codes_npz,
             val_manifest_path=val_manifest_path,
             array_key="codes",
+            task_type=task_type,
             task_id=task_id,
             model_id=model_id,
             sae_id=sae_id,
@@ -146,6 +154,8 @@ def train_sae_paper_scale_probe(
             val_targets_npz=val_targets_npz,
             target_key=target_key,
             decoder_hidden_channels=decoder_hidden_channels,
+            num_classes=num_classes,
+            ignore_index=ignore_index,
             record_type="sae_probe_summary",
         )
     return _train_paper_scale_classification_probe(
@@ -398,13 +408,14 @@ def _train_paper_scale_classification_probe(
     return summary_path
 
 
-def _train_paper_scale_depth_probe(
+def _train_paper_scale_dense_probe(
     *,
     train_array_npz: str | Path,
     train_manifest_path: str | Path,
     val_array_npz: str | Path,
     val_manifest_path: str | Path,
     array_key: str,
+    task_type: str,
     task_id: str,
     model_id: str,
     sae_id: str | None,
@@ -421,16 +432,25 @@ def _train_paper_scale_depth_probe(
     val_targets_npz: str | Path | None,
     target_key: str,
     decoder_hidden_channels: int,
+    num_classes: int | None,
+    ignore_index: int | None,
     record_type: str,
 ) -> Path:
+    if task_type not in {"dense_depth", "dense_segmentation"}:
+        raise ValueError(f"unsupported dense paper-scale task_type: {task_type}")
     if train_targets_npz is None or val_targets_npz is None:
-        raise ValueError("paper-scale dense-depth probe requires train and val targets")
+        raise ValueError(f"paper-scale {task_type} probe requires train and val targets")
     if epochs <= 0:
         raise ValueError("epochs must be positive")
     if batch_size <= 0:
         raise ValueError("batch_size must be positive")
     if decoder_hidden_channels <= 0:
         raise ValueError("decoder_hidden_channels must be positive")
+    if task_type == "dense_segmentation":
+        if num_classes is None:
+            raise ValueError("paper-scale dense-segmentation probe requires num_classes")
+        if num_classes <= 0:
+            raise ValueError("num_classes must be positive")
 
     torch = _require_torch()
     torch.manual_seed(seed)
@@ -439,27 +459,48 @@ def _train_paper_scale_depth_probe(
         array_npz=train_array_npz,
         array_key=array_key,
         manifest_path=train_manifest_path,
+        task_type=task_type,
         expected_split=expected_train_split,
         targets_npz=train_targets_npz,
         target_key=target_key,
+        target_dtype=np.float32 if task_type == "dense_depth" else np.int64,
     )
     val_features, val_targets = _load_dense_arrays(
         array_npz=val_array_npz,
         array_key=array_key,
         manifest_path=val_manifest_path,
+        task_type=task_type,
         expected_split=expected_val_split,
         targets_npz=val_targets_npz,
         target_key=target_key,
+        target_dtype=np.float32 if task_type == "dense_depth" else np.int64,
     )
-    decoder = _build_depth_decoder(
-        input_channels=train_features.shape[1],
-        hidden_channels=decoder_hidden_channels,
-        torch=torch,
-    ).to(device)
+    if task_type == "dense_depth":
+        decoder = _build_depth_decoder(
+            input_channels=train_features.shape[1],
+            hidden_channels=decoder_hidden_channels,
+            torch=torch,
+        ).to(device)
+        criterion = None
+        best_primary = float("inf")
+        checkpoint_rule = "best_validation_rmse"
+    else:
+        decoder = _build_segmentation_decoder(
+            input_channels=train_features.shape[1],
+            hidden_channels=decoder_hidden_channels,
+            num_classes=int(num_classes),
+            torch=torch,
+        ).to(device)
+        criterion = torch.nn.CrossEntropyLoss(ignore_index=-100 if ignore_index is None else ignore_index)
+        best_primary = -float("inf")
+        checkpoint_rule = "best_validation_miou"
     optimizer = torch.optim.AdamW(decoder.parameters(), lr=lr, weight_decay=weight_decay)
     train_dataset = torch.utils.data.TensorDataset(
         torch.as_tensor(train_features, dtype=torch.float32),
-        torch.as_tensor(train_targets, dtype=torch.float32),
+        torch.as_tensor(
+            train_targets,
+            dtype=torch.float32 if task_type == "dense_depth" else torch.long,
+        ),
     )
     train_loader = torch.utils.data.DataLoader(
         train_dataset,
@@ -468,11 +509,14 @@ def _train_paper_scale_depth_probe(
         generator=torch.Generator().manual_seed(seed),
     )
     val_tensor = torch.as_tensor(val_features, dtype=torch.float32, device=device)
-    val_target_tensor = torch.as_tensor(val_targets, dtype=torch.float32, device=device)
+    val_target_tensor = torch.as_tensor(
+        val_targets,
+        dtype=torch.float32 if task_type == "dense_depth" else torch.long,
+        device=device,
+    )
 
     history: list[dict[str, float | int]] = []
     best_state: dict[str, object] | None = None
-    best_rmse = float("inf")
     for epoch in range(epochs):
         decoder.train()
         train_loss = 0.0
@@ -480,11 +524,15 @@ def _train_paper_scale_depth_probe(
         for batch_features, batch_targets in train_loader:
             batch_features = batch_features.to(device)
             batch_targets = batch_targets.to(device)
-            prediction = decoder(batch_features).squeeze(1)
-            valid = batch_targets > 0
-            if not bool(valid.any()):
-                continue
-            loss = torch.nn.functional.mse_loss(prediction[valid], batch_targets[valid])
+            logits_or_prediction = decoder(batch_features)
+            if task_type == "dense_depth":
+                prediction = logits_or_prediction.squeeze(1)
+                valid = batch_targets > 0
+                if not bool(valid.any()):
+                    continue
+                loss = torch.nn.functional.mse_loss(prediction[valid], batch_targets[valid])
+            else:
+                loss = criterion(logits_or_prediction, batch_targets)
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
@@ -493,16 +541,30 @@ def _train_paper_scale_depth_probe(
 
         decoder.eval()
         with torch.no_grad():
-            val_prediction = decoder(val_tensor).squeeze(1).detach().cpu().numpy()
-        metrics = depth_metrics(val_prediction, val_targets)
+            val_output = decoder(val_tensor).detach().cpu()
+        if task_type == "dense_depth":
+            val_prediction = val_output.squeeze(1).numpy()
+            metrics = depth_metrics(val_prediction, val_targets)
+            primary = metrics["rmse"]
+        else:
+            val_logits = np.moveaxis(val_output.numpy(), 1, -1)
+            val_prediction = np.argmax(val_logits, axis=-1).astype(np.int64)
+            metrics = segmentation_metrics(
+                val_prediction,
+                val_targets,
+                num_classes=int(num_classes),
+                ignore_index=ignore_index,
+            )
+            primary = metrics["miou"]
         epoch_record = {
             "epoch": int(epoch + 1),
             "train_loss": float(train_loss / max(train_count, 1)),
             **metrics,
         }
         history.append(epoch_record)
-        if metrics["rmse"] < best_rmse:
-            best_rmse = metrics["rmse"]
+        is_best = primary < best_primary if task_type == "dense_depth" else primary > best_primary
+        if is_best:
+            best_primary = primary
             best_state = {
                 "epoch": int(epoch + 1),
                 "model": copy.deepcopy(decoder.state_dict()),
@@ -510,13 +572,50 @@ def _train_paper_scale_depth_probe(
             }
 
     if best_state is None:
-        raise RuntimeError("paper-scale depth probe did not produce a best checkpoint")
+        raise RuntimeError(f"paper-scale {task_type} probe did not produce a best checkpoint")
     decoder.load_state_dict(best_state["model"])
     decoder.eval()
     with torch.no_grad():
-        val_prediction = decoder(val_tensor).squeeze(1).detach().cpu().numpy()
-    metrics = depth_metrics(val_prediction, val_targets)
-    weights = _depth_input_weight_proxy(decoder).astype("float32")
+        val_output = decoder(val_tensor).detach().cpu()
+    if task_type == "dense_depth":
+        val_prediction = val_output.squeeze(1).numpy()
+        metrics = depth_metrics(val_prediction, val_targets)
+        weights = _depth_input_weight_proxy(decoder).astype("float32")
+        probe_arrays = {
+            "prediction": val_prediction.astype("float32"),
+            "weights": weights,
+            "targets": val_targets.astype("float32"),
+            "input_feature_weight_proxy": weights[:-1],
+        }
+        readout_type = "light_depth_decoder"
+        compatibility_note = (
+            "probe_logits.npz stores a first-layer input-channel weight proxy "
+            "for public ranking compatibility; probe_outputs.npz is the "
+            "authoritative decoder prediction artifact."
+        )
+    else:
+        val_logits = np.moveaxis(val_output.numpy(), 1, -1)
+        val_prediction = np.argmax(val_logits, axis=-1).astype(np.int64)
+        metrics = segmentation_metrics(
+            val_prediction,
+            val_targets,
+            num_classes=int(num_classes),
+            ignore_index=ignore_index,
+        )
+        weights = _segmentation_input_weight_proxy(decoder, num_classes=int(num_classes)).astype("float32")
+        probe_arrays = {
+            "logits": val_logits.astype("float32"),
+            "weights": weights,
+            "classes": np.arange(int(num_classes), dtype=np.int64),
+            "targets": val_targets.astype("int64"),
+            "input_feature_weight_proxy": weights[:-1],
+        }
+        readout_type = "light_segmentation_decoder"
+        compatibility_note = (
+            "probe_logits.npz stores a class-channel readout proxy derived from "
+            "decoder weights for public ranking compatibility; probe_outputs.npz "
+            "is the authoritative decoder-logit artifact."
+        )
 
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -530,7 +629,7 @@ def _train_paper_scale_depth_probe(
                 "metrics": best_state["metrics"],
             },
             "args": {
-                "task_type": "dense_depth",
+                "task_type": task_type,
                 "task_id": task_id,
                 "model_id": model_id,
                 "sae_id": sae_id,
@@ -541,16 +640,12 @@ def _train_paper_scale_depth_probe(
                 "weight_decay": weight_decay,
                 "decoder_hidden_channels": decoder_hidden_channels,
                 "backend": "paper_scale_torch",
+                "num_classes": num_classes,
+                "ignore_index": ignore_index,
             },
         },
         checkpoint_path,
     )
-    probe_arrays = {
-        "prediction": val_prediction.astype("float32"),
-        "weights": weights,
-        "targets": val_targets.astype("float32"),
-        "input_feature_weight_proxy": weights[:-1],
-    }
     probe_outputs_path = output_dir / "probe_outputs.npz"
     compatibility_logits_path = output_dir / "probe_logits.npz"
     np.savez_compressed(probe_outputs_path, **probe_arrays)
@@ -566,19 +661,15 @@ def _train_paper_scale_depth_probe(
         "backend": "paper_scale_torch",
         "probe_backend": "paper_scale_torch",
         "best_epoch": int(best_state["epoch"]),
-        "selection": {"checkpoint_rule": "best_validation_rmse"},
+        "selection": {"checkpoint_rule": checkpoint_rule},
         "history": history,
         "readout": {
-            "type": "light_depth_decoder",
+            "type": readout_type,
             "decoder_hidden_channels": int(decoder_hidden_channels),
         },
         "probe_outputs": str(probe_outputs_path),
         "compatibility_probe_logits": str(compatibility_logits_path),
-        "compatibility_note": (
-            "probe_logits.npz stores a first-layer input-channel weight proxy "
-            "for public ranking compatibility; probe_outputs.npz is the "
-            "authoritative decoder prediction artifact."
-        ),
+        "compatibility_note": compatibility_note,
     }
     if sae_id is not None:
         summary["sae_id"] = sae_id
@@ -593,7 +684,7 @@ def _train_paper_scale_depth_probe(
         "val_targets_npz": str(val_targets_npz),
         "train_manifest": str(train_manifest_path),
         "val_manifest": str(val_manifest_path),
-        "task_type": "dense_depth",
+        "task_type": task_type,
         "task_id": task_id,
         "model_id": model_id,
         "backend": "paper_scale_torch",
@@ -603,11 +694,15 @@ def _train_paper_scale_depth_probe(
         "weight_decay": weight_decay,
         "decoder_hidden_channels": decoder_hidden_channels,
     }
+    if num_classes is not None:
+        inputs["num_classes"] = num_classes
+    if ignore_index is not None:
+        inputs["ignore_index"] = ignore_index
     if sae_id is not None:
         inputs["sae_id"] = sae_id
     manifest = {
         "run_id": "_".join(
-            part for part in ["paper_scale_depth_probe", task_id, model_id, sae_id or "native"] if part
+            part for part in ["paper_scale_dense_probe", task_id, model_id, sae_id or "native"] if part
         ),
         "command": "feature-economy probe-sae" if sae_id is not None else "feature-economy probe-native",
         "git_commit": current_git_commit(),
@@ -659,20 +754,22 @@ def _load_dense_arrays(
     array_npz: str | Path,
     array_key: str,
     manifest_path: str | Path,
+    task_type: str,
     expected_split: str | None,
     targets_npz: str | Path,
     target_key: str,
+    target_dtype,
 ) -> tuple[np.ndarray, np.ndarray]:
     dataset = ManifestDataset(
         manifest_path,
-        task_type="dense_depth",
+        task_type=task_type,
         expected_split=expected_split,
     )
     arrays = np.load(array_npz)
     if array_key not in arrays:
         raise ValueError(f"{array_npz} does not contain array {array_key!r}")
     features = np.asarray(arrays[array_key], dtype=np.float32)
-    targets = np.asarray(_load_targets(targets_npz, target_key), dtype=np.float32)
+    targets = np.asarray(_load_targets(targets_npz, target_key), dtype=target_dtype)
     if features.shape[0] != len(dataset):
         raise ValueError(
             f"{array_key} rows ({features.shape[0]}) must match manifest rows ({len(dataset)})"
@@ -683,7 +780,7 @@ def _load_dense_arrays(
         )
     if features.shape[:-1] != targets.shape:
         raise ValueError(
-            "dense-depth features must have shape target_shape + [feature_dim]; "
+            "dense features must have shape target_shape + [feature_dim]; "
             f"got features {features.shape}, targets {targets.shape}"
         )
     return np.moveaxis(features, -1, 1).astype("float32"), targets
@@ -719,12 +816,34 @@ def _build_depth_decoder(*, input_channels: int, hidden_channels: int, torch):
     )
 
 
+def _build_segmentation_decoder(*, input_channels: int, hidden_channels: int, num_classes: int, torch):
+    return torch.nn.Sequential(
+        torch.nn.Conv2d(input_channels, hidden_channels, kernel_size=1),
+        torch.nn.ReLU(inplace=True),
+        torch.nn.Conv2d(hidden_channels, hidden_channels, kernel_size=3, padding=1),
+        torch.nn.ReLU(inplace=True),
+        torch.nn.Conv2d(hidden_channels, num_classes, kernel_size=1),
+    )
+
+
 def _depth_input_weight_proxy(decoder) -> np.ndarray:
     first_conv = decoder[0]
     weight = first_conv.weight.detach().cpu().numpy()
     channel_score = np.mean(np.abs(weight), axis=(0, 2, 3))
     bias = np.asarray([0.0], dtype=np.float32)
     return np.concatenate([channel_score, bias], axis=0)
+
+
+def _segmentation_input_weight_proxy(decoder, *, num_classes: int) -> np.ndarray:
+    first_conv = decoder[0].weight.detach().cpu().numpy()
+    final_conv = decoder[-1].weight.detach().cpu().numpy()
+    input_to_hidden = np.mean(np.abs(first_conv), axis=(2, 3)).T
+    hidden_to_class = np.mean(np.abs(final_conv), axis=(2, 3)).T
+    proxy = input_to_hidden @ hidden_to_class
+    if proxy.shape[1] != num_classes:
+        raise RuntimeError("segmentation decoder proxy class dimension mismatch")
+    bias = np.zeros((1, num_classes), dtype=np.float32)
+    return np.concatenate([proxy.astype(np.float32), bias], axis=0)
 
 
 def _require_torch():

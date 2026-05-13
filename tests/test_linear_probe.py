@@ -5,7 +5,11 @@ from pathlib import Path
 
 import numpy as np
 
-from feature_economy.artifacts import build_artifact_index, validate_probe_summary
+from feature_economy.artifacts import (
+    build_artifact_index,
+    validate_array_contract,
+    validate_probe_summary,
+)
 from feature_economy.probes import (
     train_native_linear_probe,
     train_native_paper_scale_probe,
@@ -197,6 +201,80 @@ class LinearProbeTests(unittest.TestCase):
             probe = np.load(tmpdir / "probe" / "probe_outputs.npz")
             self.assertEqual(probe["prediction"].shape, targets.shape)
             self.assertEqual(probe["weights"].shape[0], features.shape[-1] + 1)
+
+    @unittest.skipUnless(HAS_TORCH, "paper-scale torch probe tests require PyTorch")
+    def test_train_sae_paper_scale_probe_dense_segmentation(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmpdir = Path(tmpdir)
+            train_codes_path = tmpdir / "train_codes.npz"
+            val_codes_path = tmpdir / "val_codes.npz"
+            train_targets_path = tmpdir / "train_targets.npz"
+            val_targets_path = tmpdir / "val_targets.npz"
+            train_manifest_path = tmpdir / "train_manifest.jsonl"
+            val_manifest_path = tmpdir / "val_manifest.jsonl"
+            targets = np.asarray(
+                [
+                    [[0, 1], [1, 0]],
+                    [[1, 0], [0, 1]],
+                ],
+                dtype=np.int64,
+            )
+            codes = np.zeros((*targets.shape, 2), dtype=np.float32)
+            codes[..., 0] = targets == 0
+            codes[..., 1] = targets == 1
+            np.savez(train_codes_path, codes=codes)
+            np.savez(val_codes_path, codes=codes)
+            np.savez(train_targets_path, targets=targets)
+            np.savez(val_targets_path, targets=targets)
+            train_rows = [
+                {"image": "a.jpg", "segmentation": "a.png", "split": "train"},
+                {"image": "b.jpg", "segmentation": "b.png", "split": "train"},
+            ]
+            val_rows = [{**row, "split": "val"} for row in train_rows]
+            train_manifest_path.write_text(
+                "\n".join(json.dumps(row) for row in train_rows) + "\n",
+                encoding="utf-8",
+            )
+            val_manifest_path.write_text(
+                "\n".join(json.dumps(row) for row in val_rows) + "\n",
+                encoding="utf-8",
+            )
+            summary_path = train_sae_paper_scale_probe(
+                train_codes_npz=train_codes_path,
+                train_manifest_path=train_manifest_path,
+                val_codes_npz=val_codes_path,
+                val_manifest_path=val_manifest_path,
+                task_type="dense_segmentation",
+                task_id="tiny_segmentation",
+                model_id="ijepa_vit_h14",
+                sae_id="ijepa_l31_topk32_exp4",
+                output_dir=tmpdir / "probe",
+                train_targets_npz=train_targets_path,
+                val_targets_npz=val_targets_path,
+                num_classes=2,
+                ignore_index=255,
+                epochs=3,
+                batch_size=1,
+                lr=0.05,
+                decoder_hidden_channels=4,
+                device="cpu",
+            )
+            record = json.loads(summary_path.read_text())
+            validate_probe_summary(record)
+            self.assertEqual(record["backend"], "paper_scale_torch")
+            self.assertEqual(record["selection"]["checkpoint_rule"], "best_validation_miou")
+            self.assertIn("miou", record["metrics"])
+            probe = np.load(tmpdir / "probe" / "probe_outputs.npz")
+            self.assertEqual(probe["logits"].shape, (*targets.shape, 2))
+            self.assertEqual(probe["weights"].shape, (codes.shape[-1] + 1, 2))
+            contract = validate_array_contract(
+                npz_path=tmpdir / "probe" / "probe_outputs.npz",
+                kind="probe_logits",
+                task_type="dense_segmentation",
+                manifest_path=val_manifest_path,
+                expected_split="val",
+            )
+            self.assertTrue(contract["valid"])
 
     def test_train_sae_linear_probe_classification(self):
         with tempfile.TemporaryDirectory() as tmpdir:

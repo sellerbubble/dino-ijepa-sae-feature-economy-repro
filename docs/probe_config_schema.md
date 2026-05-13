@@ -99,18 +99,21 @@ accumulates.
 ## Implementation Status
 
 As of 2026-05-13, the public codebase includes an initial
-`paper-scale-torch` backend for classification-style and dense-depth saved
-arrays:
+`paper-scale-torch` backend for classification-style, dense-depth, and
+dense-segmentation saved arrays:
 
 - native classification/counting probes over `features.npz`;
 - SAE-code classification/counting probes over `codes.npz`;
 - native dense-depth probes over feature maps plus `targets.npz`;
 - SAE-code dense-depth probes over code maps plus `targets.npz`;
+- native dense-segmentation probes over feature maps plus `targets.npz`;
+- SAE-code dense-segmentation probes over code maps plus `targets.npz`;
 - AdamW training for multiple epochs;
 - best validation checkpoint selection;
 - `probe.pt`, `probe_outputs.npz`, compatibility `probe_logits.npz`, and
   `run_manifest.json` outputs.
 
-Dense-segmentation paper-scale decoder trainers are still pending. Until all
-four task families are ported, the full-profile launcher must not globally
-switch from lightweight probes to paper-scale probes.
+All four task families now have a public saved-array `paper-scale-torch`
+trainer. The full-profile launcher can switch defaults after the command
+templates and runbooks are updated to provide the required train/validation
+arrays and dense targets.
