@@ -24,7 +24,7 @@ Prepare these resources before running the full chain:
 | Input | Expected form | Notes |
 | --- | --- | --- |
 | Dataset manifests | JSONL files documented in `docs/datasets.md` | One row per image/sample, with stable split metadata. |
-| Dense targets | `.npz` files for NYUv2/ADE20K targets when using saved-array probes | Keep target order aligned with the manifest. |
+| Dense targets | Depth maps or segmentation masks referenced by the manifest | `scripts/run_full_profile.sh` exports aligned `targets.npz` files for dense profiles. |
 | DINO checkpoint | HuggingFace-compatible checkpoint or equivalent feature extractor | Configured by `configs/models/dino_v2_base.yaml`. |
 | I-JEPA checkpoint | HuggingFace-compatible checkpoint, exported TorchScript feature module, or externally generated `features.npz` | Use `IJEPA_HF_NAME_OR_PATH` for transformers-compatible checkpoints, or see `docs/export_torchscript_backbones.md`. |
 | SAE checkpoints | Public lightweight `.npz` checkpoints or convertible full checkpoints | See `docs/checkpoints.md`. |
@@ -54,9 +54,10 @@ The preferred executable entrypoint is `scripts/run_full_profile.sh`. The
 detailed manual command template remains available in
 `docs/canonical_chain_runbook.md`.
 
-## Recommended First Full Profile
+## Recommended First Full Profiles
 
-Start with one model/task/SAE profile before running the full matrix:
+Start with one model/task/SAE profile before running the full matrix. The
+smallest vertical slice is DINO/ImageNet:
 
 ```text
 model: dino_v2_base
@@ -65,8 +66,18 @@ layer/SAE: dino_l11_topk32_exp4
 stages: feature extraction -> SAE codes -> SAE probe -> Availability -> Access -> Allocation
 ```
 
-This profile exercises the same artifact contracts as the full matrix while
-keeping debugging manageable.
+The matched I-JEPA/ImageNet profile exercises the same classification chain.
+The NYUv2 profiles add dense target export and patch-grid alignment, so they are
+the recommended next check before moving to ADE20K.
+
+Supported full-profile names:
+
+```text
+dino_imagenet_l11
+ijepa_imagenet_l31
+dino_nyuv2_l11
+ijepa_nyuv2_l31
+```
 
 Preview the complete command chain without running GPU work:
 
@@ -106,11 +117,23 @@ Access ranking. For small audit runs where runtime is not a concern, set
 `CONTRIBUTION_SCORING_METHOD=exact_metric_drop` to rerun the task metric after
 each single-feature ablation.
 
-This first public launcher is intentionally conservative: it starts with one
-vertical slice and preserves the same artifact layout expected by the broader
-paper-style chain. Additional model, layer, task, and SAE profiles should extend
-this launcher or add sibling profiles rather than creating unrelated one-off
-scripts.
+For NYUv2 dense-depth profiles, provide a
+`DATA_ROOT/nyuv2/val_manifest.jsonl` with `image`, `depth`, and `split` fields.
+The launcher extracts spatial patch features, resizes depth maps to the feature
+grid, writes `$ARTIFACT_ROOT/targets/nyuv2_depth/val/targets.npz`, and passes
+that target array to native and SAE-code dense probes:
+
+```bash
+export DINO_HF_NAME_OR_PATH=/path/to/facebook/dinov2-base
+export LOCAL_FILES_ONLY=1
+
+bash scripts/run_full_profile.sh dino_nyuv2_l11
+```
+
+This public launcher is intentionally conservative: it adds vertical slices
+under one artifact contract rather than creating unrelated one-off scripts.
+Additional model, layer, task, and SAE profiles should extend this launcher or
+add sibling profiles with the same contract.
 
 Run the matched I-JEPA/ImageNet vertical slice with a transformers-compatible
 checkpoint:
@@ -135,6 +158,10 @@ over non-feature axes before fitting the closed-form readout. This keeps the
 readout dimension equal to the native hidden dimension or SAE feature dimension,
 which is required for feature ranking and ablation to remain channel-level
 analyses rather than token-by-channel flattened analyses.
+
+For dense tasks, ViT token sequences are converted to square patch grids by
+keeping the largest square suffix of the token sequence. This handles patch-only
+I-JEPA outputs as well as DINO-style outputs with leading special tokens.
 
 ## Output Layout
 

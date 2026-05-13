@@ -267,6 +267,43 @@ def validate_feature_extraction_summary(record: Mapping[str, Any]) -> None:
     _require_mapping(record["transform"], "feature_extraction_summary.transform")
 
 
+def validate_dense_target_export_summary(record: Mapping[str, Any]) -> None:
+    """Validate dense target export summaries."""
+
+    record = _require_mapping(record, "dense_target_export_summary")
+    _require_keys(
+        record,
+        [
+            "record_type",
+            "task_type",
+            "input_manifest",
+            "output_npz",
+            "target_key",
+            "num_examples",
+            "target_shape",
+            "target_dtype",
+        ],
+        "dense_target_export_summary",
+    )
+    if record["record_type"] != "dense_target_export_summary":
+        raise SchemaError(
+            "dense_target_export_summary.record_type must be dense_target_export_summary"
+        )
+    if record["task_type"] not in {"dense_depth", "dense_segmentation"}:
+        raise SchemaError("dense_target_export_summary.task_type is unsupported")
+    for key in ["input_manifest", "output_npz", "target_key", "target_dtype"]:
+        if not isinstance(record[key], str) or not record[key]:
+            raise SchemaError(f"dense_target_export_summary.{key} must be a non-empty string")
+    if not isinstance(record["num_examples"], int) or record["num_examples"] <= 0:
+        raise SchemaError("dense_target_export_summary.num_examples must be positive")
+    shape = record["target_shape"]
+    if not isinstance(shape, list) or len(shape) < 2:
+        raise SchemaError("dense_target_export_summary.target_shape must be a shape list")
+    for dim in shape:
+        if not isinstance(dim, int) or dim <= 0:
+            raise SchemaError("dense_target_export_summary.target_shape dims must be positive")
+
+
 def validate_sae_code_summary(record: Mapping[str, Any]) -> None:
     """Validate SAE code extraction summaries."""
 

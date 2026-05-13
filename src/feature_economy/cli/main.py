@@ -594,6 +594,28 @@ def build_parser() -> argparse.ArgumentParser:
     inspect_images.add_argument("--expected-split", default=None)
     inspect_images.add_argument("--limit", type=int, default=8)
     inspect_images.add_argument("--output-json", type=Path, default=None)
+    export_targets = subparsers.add_parser(
+        "export-targets",
+        help="Export dense depth or segmentation targets into the public targets.npz contract.",
+    )
+    export_targets.add_argument("--manifest", type=Path, required=True)
+    export_targets.add_argument(
+        "--task-type",
+        required=True,
+        choices=["dense_depth", "dense_segmentation"],
+    )
+    export_targets.add_argument("--output-dir", type=Path, required=True)
+    export_targets.add_argument("--expected-split", default=None)
+    export_targets.add_argument(
+        "--features-npz",
+        type=Path,
+        default=None,
+        help="Optional spatial features.npz used to infer dense target height/width.",
+    )
+    export_targets.add_argument("--height", type=int, default=None)
+    export_targets.add_argument("--width", type=int, default=None)
+    export_targets.add_argument("--max-examples", type=int, default=None)
+    export_targets.add_argument("--target-key", default="targets")
     index_artifacts = subparsers.add_parser(
         "index-artifacts",
         help="Build a JSON/CSV index for public reproduction artifacts.",
@@ -1144,6 +1166,26 @@ def main() -> int:
         )
         if args.output_json is not None:
             print(f"Wrote image inspection report to {args.output_json}")
+        return 0
+    if args.command == "export-targets":
+        from feature_economy.data.targets import export_dense_targets
+
+        if (args.height is None) != (args.width is None):
+            parser.error("export-targets requires both --height and --width, or neither")
+        target_shape = None
+        if args.height is not None and args.width is not None:
+            target_shape = (args.height, args.width)
+        summary_path = export_dense_targets(
+            manifest_path=args.manifest,
+            task_type=args.task_type,
+            output_dir=args.output_dir,
+            expected_split=args.expected_split,
+            features_npz=args.features_npz,
+            target_shape=target_shape,
+            max_examples=args.max_examples,
+            target_key=args.target_key,
+        )
+        print(f"Wrote dense target export summary to {summary_path}")
         return 0
     if args.command == "index-artifacts":
         from feature_economy.artifacts import build_artifact_index

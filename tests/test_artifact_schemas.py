@@ -7,6 +7,7 @@ from feature_economy.artifacts import (
     validate_artifact_bundle_check,
     validate_availability_summary,
     validate_contribution_scores_summary,
+    validate_dense_target_export_summary,
     validate_feature_extraction_summary,
     validate_feature_ranking,
     validate_probe_summary,
@@ -147,6 +148,20 @@ class ArtifactSchemaTests(unittest.TestCase):
                     "crop": 224,
                     "normalize": "imagenet",
                 },
+            }
+        )
+
+    def test_dense_target_export_summary_contract(self):
+        validate_dense_target_export_summary(
+            {
+                "record_type": "dense_target_export_summary",
+                "task_type": "dense_depth",
+                "input_manifest": "nyuv2/val_manifest.jsonl",
+                "output_npz": "targets.npz",
+                "target_key": "targets",
+                "num_examples": 8,
+                "target_shape": [8, 16, 16],
+                "target_dtype": "float32",
             }
         )
 

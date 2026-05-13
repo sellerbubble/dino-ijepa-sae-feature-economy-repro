@@ -13,6 +13,7 @@ from feature_economy.models import (
     extract_torchscript_features,
 )
 from feature_economy.models.feature_extraction import _select_hidden_state
+from feature_economy.models.feature_extraction import _tokens_to_patch_grid
 
 
 PUBLIC_REPRO_ROOT = Path(__file__).resolve().parents[1]
@@ -273,6 +274,12 @@ class FeatureExtractionTests(unittest.TestCase):
         hidden_states = [np.asarray([index]) for index in range(4)]
         selected = _select_hidden_state(hidden_states, layer=2)
         self.assertEqual(selected.tolist(), [3])
+
+    def test_tokens_to_patch_grid_keeps_largest_square_suffix(self):
+        features = np.arange(1 * 5 * 2, dtype=np.float32).reshape(1, 5, 2)
+        grid = _tokens_to_patch_grid(features)
+        self.assertEqual(grid.shape, (1, 2, 2, 2))
+        np.testing.assert_array_equal(grid.reshape(1, 4, 2), features[:, 1:, :])
 
 
 if __name__ == "__main__":

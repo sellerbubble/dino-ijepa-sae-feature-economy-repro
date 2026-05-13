@@ -22,6 +22,20 @@ Current manifest contract:
 - NYUv2-style depth: add `depth`.
 - ADE20K-style segmentation: add `segmentation`.
 
+For dense profiles, `depth` and `segmentation` point to manifest-relative or
+absolute target files. The public `export-targets` command supports `.npy`,
+`.npz`, and image files, then writes a probe-ready `targets.npz` aligned to the
+spatial feature grid:
+
+```bash
+feature-economy export-targets \
+  --manifest /path/to/nyuv2/val_manifest.jsonl \
+  --task-type dense_depth \
+  --expected-split val \
+  --features-npz /path/to/features.npz \
+  --output-dir /path/to/targets/nyuv2_depth/val
+```
+
 Validation command:
 
 ```bash

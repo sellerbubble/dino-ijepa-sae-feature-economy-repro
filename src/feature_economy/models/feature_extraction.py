@@ -172,7 +172,10 @@ def extract_huggingface_features(
             hidden = _select_hidden_state(result.hidden_states, selected_layer)
             outputs.append(hidden.detach().cpu().numpy())
 
-    features = np.concatenate(outputs, axis=0).astype(dtype)
+    features = _format_features_for_task(
+        np.concatenate(outputs, axis=0),
+        task_type=task_type,
+    ).astype(dtype)
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
     feature_path = output_dir / "features.npz"
@@ -191,7 +194,10 @@ def extract_huggingface_features(
         output_dir=output_dir,
         feature_path=feature_path,
         feature_shape=list(features.shape),
-        token_format=str(model_config["output"]["token_format"]),
+        token_format=_token_format_for_task(
+            str(model_config["output"]["token_format"]),
+            task_type=task_type,
+        ),
         transform=dict(model_config["transform"]),
         fixture=False,
         backend="huggingface",
@@ -276,7 +282,10 @@ def extract_torchscript_features(
             )
             outputs.append(features.detach().cpu().numpy())
 
-    features_np = np.concatenate(outputs, axis=0).astype(dtype)
+    features_np = _format_features_for_task(
+        np.concatenate(outputs, axis=0),
+        task_type=task_type,
+    ).astype(dtype)
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
     feature_path = output_dir / "features.npz"
@@ -295,7 +304,10 @@ def extract_torchscript_features(
         output_dir=output_dir,
         feature_path=feature_path,
         feature_shape=list(features_np.shape),
-        token_format=str(model_config["output"]["token_format"]),
+        token_format=_token_format_for_task(
+            str(model_config["output"]["token_format"]),
+            task_type=task_type,
+        ),
         transform=dict(model_config["transform"]),
         fixture=False,
         backend="torchscript",
@@ -317,6 +329,51 @@ def _deterministic_feature_vector(key: str, layer: int, feature_dim: int) -> np.
     for index in range(feature_dim):
         values.append(((base + index * 37) % 1000) / 1000.0)
     return np.asarray(values, dtype=np.float32)
+
+
+def _format_features_for_task(features: np.ndarray, *, task_type: str) -> np.ndarray:
+    """Return public feature arrays in the shape expected by probe backends.
+
+    Classification/counting profiles keep the backbone token sequence because
+    the public linear probe mean-pools non-feature axes. Dense profiles need a
+    spatial feature map aligned to dense targets, so ViT token sequences are
+    converted to a square patch grid by dropping leading special tokens.
+    """
+
+    if task_type not in {"dense_depth", "dense_segmentation"}:
+        return features
+    if features.ndim != 3:
+        return features
+    return _tokens_to_patch_grid(features)
+
+
+def _token_format_for_task(token_format: str, *, task_type: str) -> str:
+    if task_type in {"dense_depth", "dense_segmentation"}:
+        return f"patch_grid_from_{token_format}"
+    return token_format
+
+
+def _tokens_to_patch_grid(features: np.ndarray) -> np.ndarray:
+    """Convert `[batch, tokens, dim]` ViT features to `[batch, h, w, dim]`.
+
+    DINO-style outputs may include leading CLS/register tokens, while I-JEPA
+    commonly returns patch tokens only. The public rule keeps the largest square
+    suffix of the sequence, which covers `N^2`, `1 + N^2`, and
+    `1 + register + N^2` layouts without model-specific hardcoding.
+    """
+
+    if features.ndim != 3:
+        raise ValueError("token features must have shape [batch, tokens, dim]")
+    num_tokens = int(features.shape[1])
+    side = int(np.floor(np.sqrt(num_tokens)))
+    while side > 0:
+        patch_tokens = side * side
+        if patch_tokens <= num_tokens:
+            start = num_tokens - patch_tokens
+            patches = features[:, start:, :]
+            return patches.reshape(features.shape[0], side, side, features.shape[2])
+        side -= 1
+    raise ValueError(f"unable to find a square patch grid in {num_tokens} tokens")
 
 
 def _write_feature_artifacts(

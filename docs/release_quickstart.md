@@ -55,7 +55,8 @@ example of the public v1 artifact contract.
 The default public path regenerates intermediate arrays locally instead of
 requiring a paper-scale feature-cache download. To reproduce the scientific
 chain, provide real manifests, model checkpoints or exported feature modules,
-SAE checkpoints, GPU resources, and dense targets when needed.
+SAE checkpoints, GPU resources, and manifest-referenced dense targets when
+needed.
 
 For expected score ranges and qualitative checks, see `docs/expected_results.md`.
 
@@ -103,6 +104,17 @@ bash scripts/run_full_profile.sh ijepa_imagenet_l31
 For the classification vertical slice, contribution scoring defaults to the
 scalable `true_class_logit_drop` method. To run a small exact audit instead, set
 `CONTRIBUTION_SCORING_METHOD=exact_metric_drop`.
+
+The same launcher now includes NYUv2 dense-depth vertical slices. A NYUv2
+manifest should live at `$DATA_ROOT/nyuv2/val_manifest.jsonl` and include
+`image`, `depth`, and `split` fields. Dense profiles export aligned
+`targets.npz` automatically:
+
+```bash
+export DINO_HF_NAME_OR_PATH=/path/to/facebook/dinov2-base
+export LOCAL_FILES_ONLY=1
+bash scripts/run_full_profile.sh dino_nyuv2_l11
+```
 
 Set paths:
 
