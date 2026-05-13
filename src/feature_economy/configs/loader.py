@@ -54,6 +54,7 @@ def validate_all_configs(config_root: str | Path) -> list[Path]:
         "models": validate_model_config,
         "saes": validate_sae_config,
         "tasks": validate_task_config,
+        "probes": validate_probe_config,
         "experiments": validate_experiment_config,
     }
     validated: list[Path] = []
@@ -147,6 +148,60 @@ def validate_task_config(record: Mapping[str, Any]) -> None:
     _reject_private_paths(record, "task_config")
 
 
+def validate_probe_config(record: Mapping[str, Any]) -> None:
+    _require_keys(
+        record,
+        [
+            "id",
+            "task_id",
+            "probe_family",
+            "supported_input_spaces",
+            "backend",
+            "status",
+            "training",
+            "selection",
+            "metrics",
+            "outputs",
+        ],
+        "probe_config",
+    )
+    _require_identifier(record["id"], "probe_config.id")
+    _require_identifier(record["task_id"], "probe_config.task_id")
+    if record["probe_family"] not in {
+        "classification",
+        "count_classification",
+        "dense_depth",
+        "dense_segmentation",
+    }:
+        raise ConfigError(f"unsupported probe_config.probe_family: {record['probe_family']!r}")
+    input_spaces = record["supported_input_spaces"]
+    if not isinstance(input_spaces, list) or not input_spaces:
+        raise ConfigError("probe_config.supported_input_spaces must be a non-empty list")
+    for input_space in input_spaces:
+        if input_space not in {"native", "sae_code"}:
+            raise ConfigError(f"unsupported probe input space: {input_space!r}")
+    if record["backend"] not in {"paper_scale_torch", "lightweight_closed_form", "fixture"}:
+        raise ConfigError(f"unsupported probe_config.backend: {record['backend']!r}")
+    if record["status"] not in {"draft_recipe", "ported", "validated", "deprecated"}:
+        raise ConfigError(f"unsupported probe_config.status: {record['status']!r}")
+    training = _require_mapping(record["training"], "probe_config.training")
+    _require_keys(training, ["epochs", "batch_size", "optimizer", "learning_rate"], "probe_config.training")
+    _require_type(training["epochs"], int, "probe_config.training.epochs")
+    _require_type(training["batch_size"], int, "probe_config.training.batch_size")
+    _require_type(training["learning_rate"], (int, float), "probe_config.training.learning_rate")
+    selection = _require_mapping(record["selection"], "probe_config.selection")
+    _require_keys(selection, ["checkpoint_rule"], "probe_config.selection")
+    metrics = _require_mapping(record["metrics"], "probe_config.metrics")
+    _require_keys(metrics, ["primary", "report"], "probe_config.metrics")
+    if not isinstance(metrics["report"], list) or not metrics["report"]:
+        raise ConfigError("probe_config.metrics.report must be a non-empty list")
+    if metrics["primary"] not in metrics["report"]:
+        raise ConfigError("probe_config.metrics.primary must appear in metrics.report")
+    outputs = _require_mapping(record["outputs"], "probe_config.outputs")
+    _require_keys(outputs, ["summary", "checkpoint", "probe_outputs"], "probe_config.outputs")
+    _reject_private_paths(record, "probe_config")
+
+
 def validate_experiment_config(record: Mapping[str, Any]) -> None:
     _require_keys(record, ["id", "mode", "seed", "output_dir"], "experiment_config")
     _require_identifier(record["id"], "experiment_config.id")
@@ -187,9 +242,13 @@ def _require_mapping(value: Any, name: str) -> Mapping[str, Any]:
     return value
 
 
-def _require_type(value: Any, expected_type: type, name: str) -> None:
+def _require_type(value: Any, expected_type: type | tuple[type, ...], name: str) -> None:
     if not isinstance(value, expected_type):
-        raise ConfigError(f"{name} must be {expected_type.__name__}")
+        if isinstance(expected_type, tuple):
+            type_name = " or ".join(type_.__name__ for type_ in expected_type)
+        else:
+            type_name = expected_type.__name__
+        raise ConfigError(f"{name} must be {type_name}")
 
 
 def _require_identifier(value: Any, name: str) -> None:

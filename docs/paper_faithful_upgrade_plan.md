@@ -209,6 +209,7 @@ Create stable public configs before moving trainer code.
 Deliverables:
 
 - `configs/probes/*.yaml`.
+- `docs/probe_config_schema.md`.
 - Updated `docs/artifact_schemas.md` if paper-scale trainers need additional
   fields.
 - A probe-config validation path in `check-configs` or a dedicated checker.

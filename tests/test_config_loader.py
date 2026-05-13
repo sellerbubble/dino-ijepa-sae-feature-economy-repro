@@ -6,6 +6,7 @@ from feature_economy.configs import (
     load_yaml,
     validate_all_configs,
     validate_model_config,
+    validate_probe_config,
     validate_task_config,
 )
 
@@ -16,7 +17,7 @@ PUBLIC_REPRO_ROOT = Path(__file__).resolve().parents[1]
 class ConfigLoaderTests(unittest.TestCase):
     def test_all_example_configs_are_valid(self):
         validated = validate_all_configs(PUBLIC_REPRO_ROOT / "configs")
-        self.assertEqual(len(validated), 12)
+        self.assertEqual(len(validated), 16)
 
     def test_load_yaml_requires_mapping(self):
         fixture = PUBLIC_REPRO_ROOT / "tests" / "fixtures" / "tiny_probe_summary.json"
@@ -49,6 +50,31 @@ class ConfigLoaderTests(unittest.TestCase):
         }
         with self.assertRaises(ConfigError):
             validate_task_config(record)
+
+    def test_probe_config_primary_metric_must_be_reported(self):
+        record = {
+            "id": "bad_probe",
+            "task_id": "imagenet_1k",
+            "probe_family": "classification",
+            "supported_input_spaces": ["native", "sae_code"],
+            "backend": "paper_scale_torch",
+            "status": "draft_recipe",
+            "training": {
+                "epochs": 20,
+                "batch_size": 512,
+                "optimizer": "adamw",
+                "learning_rate": 1e-3,
+            },
+            "selection": {"checkpoint_rule": "best_validation_top1"},
+            "metrics": {"primary": "top1", "report": ["top5"]},
+            "outputs": {
+                "summary": "summary.json",
+                "checkpoint": "probe.pt",
+                "probe_outputs": "probe_outputs.npz",
+            },
+        }
+        with self.assertRaises(ConfigError):
+            validate_probe_config(record)
 
 
 if __name__ == "__main__":

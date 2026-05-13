@@ -1,0 +1,46 @@
+id: nyuv2_depth_paper_scale
+task_id: nyuv2_depth
+probe_family: dense_depth
+supported_input_spaces: [native, sae_code]
+backend: paper_scale_torch
+status: draft_recipe
+paper_reference:
+  source_private_runners:
+    native: scripts/benchmarks/run_nyuv2_depth_probe.py
+    sae_code: scripts/benchmarks/run_nyuv2_sae_depth_probe.py
+  audit_note: docs/workflow/private_paper_scale_trainer_audit_20260513.md
+readout:
+  native_type: light_depth_decoder
+  sae_type: shallow_probe
+  decoder_hidden_channels: 256
+  adapter_bottleneck_channels: 256
+target:
+  max_depth_m: 10.0
+transform:
+  mode: shared_imagenet
+  resize_size: 256
+  crop_size: 224
+training:
+  epochs: 20
+  batch_size: 16
+  optimizer: adamw
+  learning_rate: 0.001
+  weight_decay: 0.0001
+  seed: 42
+selection:
+  checkpoint_rule: best_validation_rmse
+metrics:
+  primary: rmse
+  report: [rmse, abs_rel, delta1]
+ranking:
+  available_for_sae_code: true
+  default_method: hybrid
+  source: hybrid_probe_weight_plus_val_contribution
+outputs:
+  summary: summary.json
+  checkpoint: probe.pt
+  probe_outputs: probe_outputs.npz
+  ranking: task_feature_ranking.json
+notes:
+  - Lower rmse is better.
+  - Public dense target export must preserve depth clipping and feature-grid alignment.

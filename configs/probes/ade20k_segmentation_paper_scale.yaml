@@ -1,0 +1,49 @@
+id: ade20k_segmentation_paper_scale
+task_id: ade20k_segmentation
+probe_family: dense_segmentation
+supported_input_spaces: [native, sae_code]
+backend: paper_scale_torch
+status: draft_recipe
+paper_reference:
+  source_private_runners:
+    native: scripts/benchmarks/run_ade20k_segmentation_probe.py
+    sae_code: scripts/benchmarks/run_ade20k_sae_segmentation_probe.py
+  audit_note: docs/workflow/private_paper_scale_trainer_audit_20260513.md
+readout:
+  native_type: light_segmentation_decoder
+  sae_type: shallow_probe
+  decoder_hidden_channels: 256
+  adapter_bottleneck_channels: 256
+  num_classes: 150
+  ignore_index: 255
+target:
+  official_ignore_value: 0
+  label_offset: -1
+transform:
+  mode: shared_imagenet
+  resize_size: 256
+  crop_size: 224
+training:
+  epochs: 20
+  batch_size: 8
+  optimizer: adamw
+  learning_rate: 0.001
+  weight_decay: 0.0001
+  seed: 42
+selection:
+  checkpoint_rule: best_validation_miou
+metrics:
+  primary: miou
+  report: [miou, pixel_accuracy]
+ranking:
+  available_for_sae_code: true
+  default_method: hybrid
+  source: hybrid_probe_weight_plus_val_contribution
+outputs:
+  summary: summary.json
+  checkpoint: probe.pt
+  probe_outputs: probe_outputs.npz
+  ranking: task_feature_ranking.json
+notes:
+  - ADE20K has a known postfix_v1 versus E2 no-ablation baseline mismatch.
+  - Public configs must distinguish best validation summaries from E2 causal-analysis baselines.
