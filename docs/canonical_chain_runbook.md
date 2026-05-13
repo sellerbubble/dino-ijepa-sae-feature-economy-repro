@@ -1,10 +1,12 @@
 # Canonical Paper Chain Runbook
 
 This is the public how-to guide for reproducing the main Feature Economy
-artifact chain from saved features, SAE codes, and task targets.
+artifact chain from dataset manifests, model features, SAE codes, and task
+targets.
 
-It is intentionally artifact-first. Full paper-scale backbone extraction can be
-expensive and checkpoint-dependent, so the canonical chain is split into:
+It is intentionally cache-friendly but not cache-required. Full paper-scale
+backbone extraction can be expensive and checkpoint-dependent, so the canonical
+chain is split into:
 
 1. Validate configs, runtime, manifests, checkpoints, and preprocessing.
 2. Extract or provide saved native features.
@@ -14,8 +16,9 @@ expensive and checkpoint-dependent, so the canonical chain is split into:
 6. Compute Availability, Access, and Allocation artifacts.
 7. Index artifacts and export paper-facing tables and overview figures.
 
-The release boundary for this artifact-first path is documented in
-`docs/public_v1_scope.md`.
+The release boundary for this lightweight rerun path is documented in
+`docs/public_v1_scope.md`. The optional saved-array audit bundle follows the
+same artifact contracts but is not required for ordinary reruns.
 
 For a tiny checkpoint-free validation of the same command surface, run:
 

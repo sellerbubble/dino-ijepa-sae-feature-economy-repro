@@ -7,13 +7,15 @@ DINO/I-JEPA SAE Feature Economy reproduction repo.
 
 ## Release Position
 
-Public v1 is an **artifact-first, saved-array reproduction** of the paper's main
-evidence chain. It is designed to let external readers inspect, validate, and
-rerun the Feature Economy analyses once they have prepared compatible saved
-features, SAE codes, probes, and task targets.
+Public v1 is a **lightweight executable reproduction repo** for the paper's main
+evidence chain. It is designed to let external readers prepare datasets and
+checkpoints, generate their own features and SAE codes, run the Feature Economy
+analyses, and compare the resulting patterns against documented expected
+results.
 
 It is not intended to be a full private-cluster recreation of every paper-scale
-training loop.
+training loop. Large saved-array bundles may be published as optional audit
+artifacts, but they are not the default reproduction path.
 
 ## What Public V1 Must Support
 
@@ -22,8 +24,8 @@ Public v1 should support the following chain:
 ```text
 configs and manifests
   -> image/manifest validation
-  -> native feature extraction or externally provided features
-  -> lightweight SAE code extraction or externally provided codes
+  -> native feature extraction
+  -> lightweight SAE code extraction
   -> native and SAE-code linear probes
   -> Availability, Access, and Allocation analyses
   -> artifact indexing
@@ -42,18 +44,20 @@ The supported model entry points are:
 
 - DINO-style HuggingFace feature extraction through `extract-features --backend huggingface`.
 - I-JEPA/local model feature extraction through exported TorchScript feature modules.
-- Externally provided `features.npz` and `codes.npz` arrays that satisfy the public contracts.
+- Externally provided `features.npz` and `codes.npz` arrays that satisfy the
+  public contracts, for users who prefer to cache or reuse intermediate arrays.
 
 ## What Public V1 Explicitly Does Not Claim
 
 Public v1 does not claim:
 
-- exact paper-scale reproduction from raw datasets and raw checkpoints;
+- bit-identical reproduction of private paper-scale feature caches;
 - an official raw I-JEPA checkpoint loader;
 - equivalence to private probe-training loops;
 - final manuscript figure reproduction;
 - redistribution of datasets, model weights, or SAE checkpoints;
-- support for every private artifact variant produced during research.
+- support for every private artifact variant produced during research;
+- mandatory download of paper-scale feature arrays or SAE codes.
 
 These omissions are release-boundary decisions, not hidden TODOs. They keep the
 first public repo executable, auditable, and portable.
@@ -73,8 +77,9 @@ A public v1 checkout should provide these gates:
 - `feature-economy validate-arrays`: saved-array contract validation.
 - `feature-economy index-artifacts --require-valid`: artifact schema validation.
 - `feature-economy make-tables` and `feature-economy make-figures`: public result exports.
-- `docs/release_artifact_bundle_layout.md`: expected layout for real saved-array
-  release assets.
+- `docs/expected_results.md`: reference scores and qualitative acceptance bands.
+- `docs/release_artifact_bundle_layout.md`: expected layout for optional
+  saved-array audit assets.
 - `scripts/check_public_release.py`: required-file, executable-bit, Markdown,
   README-link, and private-path hygiene checks.
 - `.github/workflows/ci.yml`: standalone public-repo CI that runs unit tests,
@@ -97,8 +102,8 @@ wording caveat. Add it only if all of the following are true:
 - the README and roadmap clearly distinguish lightweight and paper-scale modes.
 
 Until those conditions are met, public v1 should treat paper-scale probe
-training as a future extension and keep the reproducible path centered on saved
-arrays plus lightweight probes.
+training as a future extension and keep the reproducible path centered on
+regenerating features/codes plus lightweight probes.
 
 ## Extension Rule
 

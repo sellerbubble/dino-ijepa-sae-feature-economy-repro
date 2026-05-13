@@ -2,12 +2,13 @@
 
 Date: 2026-05-13
 
-This document defines the first non-fixture artifact bundle that should be
-prepared for the public DINO/I-JEPA SAE Feature Economy reproduction repo.
+This document defines the first non-fixture saved-array audit bundle prepared
+for the public DINO/I-JEPA SAE Feature Economy reproduction repo.
 
-The purpose is not to publish raw datasets, model weights, or private cluster
-logs. The purpose is to publish a portable saved-array bundle that lets an
-external reader rerun the paper's main public analysis chain:
+The purpose is not to publish raw datasets, model weights, private cluster
+logs, or a mandatory feature cache for ordinary users. The purpose is to archive
+a portable saved-array bundle that lets an external reader audit the paper's
+main public analysis chain:
 
 ```text
 native probe / SAE-code probe
@@ -18,9 +19,9 @@ native probe / SAE-code probe
   -> CSV tables and overview figures
 ```
 
-## Release Scope
+## Audit Bundle Scope
 
-The first real bundle should cover the public v1 matrix:
+The optional audit bundle should cover the public v1 matrix:
 
 | Axis | Required values |
 | --- | --- |
@@ -285,8 +286,8 @@ The artifact bundle `README.md` should include:
 - a short description of each top-level directory;
 - commands to verify checksum, unpack, run `check-bundle`, index artifacts, and
   regenerate tables;
-- known caveats, especially that public v1 is an artifact-first saved-array
-  reproduction rather than a raw-data training reproduction.
+- known caveats, especially that this is an optional saved-array audit bundle
+  rather than the default lightweight rerun path.
 
 Generate the initial README with:
 

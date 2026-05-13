@@ -7,9 +7,9 @@ skeleton to an executable reproduction repo for the DINO/I-JEPA SAE Feature
 Economy paper chain.
 
 The current release boundary is defined in `docs/public_v1_scope.md`: public v1
-is artifact-first and saved-array based. Exact private paper-scale training
-loops are future extensions unless they satisfy the escalation rule in that
-scope document.
+is a lightweight executable rerun repo with optional saved-array audit support.
+Exact private paper-scale training loops are future extensions unless they
+satisfy the escalation rule in that scope document.
 
 ## End State
 
@@ -17,8 +17,9 @@ External readers should be able to reproduce the main paper chain:
 
 ```text
 dataset manifest
-  -> native backbone feature/probe artifacts
-  -> SAE-code probe artifacts
+  -> native backbone feature extraction
+  -> SAE-code extraction
+  -> native/SAE-code probe artifacts
   -> availability/access/allocation analyses
   -> paper tables and figures
 ```

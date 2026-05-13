@@ -4,18 +4,20 @@ This directory is the curated public reproduction slice for the DINO/I-JEPA SAE
 Feature Economy project.
 
 Status: active public reproduction slice. It includes configs, artifact schemas,
-tiny validation tests, fixture runners, saved-array feature/code probes,
-availability/access/allocation analyses, artifact indexing, and table export.
-Optional overview figure export is available with the `figures` extra.
-It still does not ship datasets, checkpoints, paper-scale training loops, or
-final designed paper figures.
+tiny validation tests, fixture runners, feature/code extraction interfaces,
+lightweight probe and AAA analysis commands, artifact indexing, and table
+export. Optional overview figure export is available with the `figures` extra.
+It does not ship datasets, checkpoints, paper-scale feature caches, SAE codes,
+or final designed paper figures by default.
 
 ## Goal
 
-The public repo should let external readers reproduce the main paper chain:
+The public repo should let external readers rerun the main paper chain from
+their own datasets, checkpoints, and SAE checkpoints:
 
 ```text
-dataset/config -> native probe -> SAE probe -> usage/ranking -> ablation -> paper table/figure
+dataset/config -> feature extraction -> SAE codes -> native/SAE probes
+  -> usage/ranking -> ablation -> paper-style table/figure
 ```
 
 It should also make future extensions routine: new models, layers, SAEs, tasks,
@@ -27,7 +29,8 @@ than by copying experiment scripts.
 - Config examples for DINOv2, I-JEPA, SAE checkpoints, tasks, and experiments.
 - Artifact schema helpers for run manifests, probe summaries, feature rankings,
   and ablation summaries.
-- Fixture and saved-array command backends for the paper evidence chain.
+- Fixture, HuggingFace, TorchScript, and saved-array command backends for the
+  paper evidence chain.
 - A run-plan exporter that expands model/task/SAE configs into a JSON/CSV
   reproduction matrix.
 - Documentation for datasets, checkpoints, artifact schemas, extension workflow,
@@ -38,13 +41,16 @@ than by copying experiment scripts.
 - A GitHub Actions CI template for the standalone public repo export.
 - A standalone export script that copies this slice into a clean publishable
   repository tree and runs the public release hygiene checker.
-- A release-asset packaging script that validates a saved-array artifact root,
-  regenerates indexes/tables, and emits a tarball plus SHA256 checksum.
+- A release-asset packaging script for optional audit bundles. This is useful
+  for archiving paper-used intermediate arrays, but it is not the default
+  external reproduction path.
 
 ## What Is Not Included Yet
 
-- Dataset downloads.
+- Dataset downloads or redistributed raw data.
 - Model or SAE checkpoints.
+- Large paper-scale feature arrays, SAE-code arrays, or probe-logit caches by
+  default.
 - Raw official I-JEPA checkpoint loading. Exported I-JEPA feature modules can
   use the TorchScript backend.
 - Exact private paper-scale training loops.
@@ -52,32 +58,24 @@ than by copying experiment scripts.
 - Private cluster launchers or local artifact paths.
 
 Use `docs/reproduction_status.md` for current coverage and known gaps.
-Use `docs/public_v1_scope.md` for the release boundary: public v1 is an
-artifact-first saved-array reproduction, not a private-cluster training-loop
-dump.
+Use `docs/public_v1_scope.md` for the release boundary: public v1 is a
+lightweight executable rerun repo with optional saved-array audit support, not a
+private-cluster training-loop dump.
 
 ## Main Reproduction Path
 
-Start with `docs/release_quickstart.md` for the 5-minute smoke path and the
-short real saved-array vertical slice.
+Start with `docs/release_quickstart.md` for the 5-minute smoke path, then run a
+real vertical slice from your own prepared manifests, model features, SAE
+checkpoints, and task targets. The default expected outcome is approximate
+scientific agreement with the paper, not bit-identical reproduction of private
+intermediate arrays.
 
-The first full saved-array artifact bundle is published as a split GitHub
-Release asset:
+For expected metric ranges and qualitative acceptance checks, see
+`docs/expected_results.md`.
 
-```bash
-gh release download v1-saved-array-20260513 \
-  --repo sellerbubble/dino-ijepa-sae-feature-economy-repro \
-  --pattern 'feature_economy_artifacts_v1*'
-
-cat feature_economy_artifacts_v1.tar.gz.part-* > feature_economy_artifacts_v1.tar.gz
-sha256sum -c feature_economy_artifacts_v1.tar.gz.sha256
-tar -xzf feature_economy_artifacts_v1.tar.gz
-export ARTIFACT_ROOT=$PWD/public_repro_feature_economy_v1_candidate
-```
-
-The unpacked bundle contains the public v1 saved-array evidence chain:
-`66/66` run-plan rows complete, `190/190` indexed artifacts valid, and CSV
-tables for probe scores, Availability, Access, and Allocation.
+An optional full saved-array audit bundle is published as split GitHub Release
+assets. It contains paper-used intermediate arrays and tables for traceability,
+but ordinary users do not need it to rerun the experiments.
 
 For the complete step-by-step paper-chain template, see
 `docs/canonical_chain_runbook.md`.

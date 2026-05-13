@@ -2,13 +2,16 @@
 
 Date: 2026-05-13
 
-This document defines the recommended layout for public saved-array release
-assets. It is the bridge between the private research workbench and the public
-v1 reproduction repo.
+This document defines the recommended layout for optional public saved-array
+audit assets. It is the bridge between the private research workbench and the
+public v1 reproduction repo when maintainers choose to publish paper-used
+intermediate arrays.
 
-The goal is simple: an external reader should be able to unpack a bundle, point
-`ARTIFACT_ROOT` at it, and run the public validators, tables, and figures
-without knowing any private cluster paths.
+The goal is simple: an external reader should be able to unpack an optional
+audit bundle, point `ARTIFACT_ROOT` at it, and run the public validators,
+tables, and figures without knowing any private cluster paths. This audit path
+is separate from the default lightweight rerun path, where users regenerate
+features and SAE codes themselves.
 
 ## Bundle Root
 

@@ -1,8 +1,9 @@
 # Release Quickstart
 
 This is the shortest path for checking that the public reproduction repo works
-and for running the real saved-array evidence chain. For the complete command
-reference, see `docs/canonical_chain_runbook.md`.
+and for running a real lightweight reproduction slice from user-provided data,
+checkpoints, and SAE checkpoints. For the complete command reference, see
+`docs/canonical_chain_runbook.md`.
 
 ## 1. Five-Minute Smoke Check
 
@@ -46,59 +47,16 @@ This builds one DINO/ImageNet SAE slice from tiny fixture arrays, then verifies:
 - `make-tables` exports public CSV tables.
 
 The tiny bundle is still not a scientific result. It is the smallest executable
-example of the public v1 artifact-first contract.
+example of the public v1 artifact contract.
 
-## 3. Download The Full Saved-Array Bundle
+## 3. Real Lightweight Vertical Slice
 
-The first public v1 scientific artifact bundle is distributed as split GitHub
-Release assets. Download every part and checksum file:
+The default public path regenerates intermediate arrays locally instead of
+requiring a paper-scale feature-cache download. To reproduce the scientific
+chain, provide real manifests, model checkpoints or exported feature modules,
+SAE checkpoints, and dense targets when needed.
 
-```bash
-gh release download v1-saved-array-20260513 \
-  --repo sellerbubble/dino-ijepa-sae-feature-economy-repro \
-  --pattern 'feature_economy_artifacts_v1*'
-```
-
-Reassemble and verify:
-
-```bash
-cat feature_economy_artifacts_v1.tar.gz.part-* > feature_economy_artifacts_v1.tar.gz
-sha256sum -c feature_economy_artifacts_v1.tar.gz.sha256
-tar -xzf feature_economy_artifacts_v1.tar.gz
-export ARTIFACT_ROOT=$PWD/public_repro_feature_economy_v1_candidate
-export PYTHONPATH=$PWD/src
-```
-
-Then verify the unpacked bundle and regenerate public tables:
-
-```bash
-python -m feature_economy.cli.main check-bundle \
-  --run-plan-json "$ARTIFACT_ROOT/run_plan/reproduction_run_plan.json" \
-  --artifact-root "$ARTIFACT_ROOT" \
-  --output-json "$ARTIFACT_ROOT/run_plan/artifact_bundle_check_local.json" \
-  --require-complete
-
-python -m feature_economy.cli.main index-artifacts \
-  --input-dir "$ARTIFACT_ROOT" \
-  --output-json "$ARTIFACT_ROOT/index/artifact_index_local.json" \
-  --output-csv "$ARTIFACT_ROOT/index/artifact_index_local.csv" \
-  --require-valid
-
-python -m feature_economy.cli.main make-tables \
-  --artifact-index "$ARTIFACT_ROOT/index/artifact_index_local.json" \
-  --output-dir "$ARTIFACT_ROOT/tables_local"
-```
-
-Expected current public v1 status:
-
-- `66/66` run-plan rows complete;
-- `190/190` indexed artifacts valid;
-- generated tables for probe scores, Availability, Access, and Allocation.
-
-## 4. Real Saved-Array Vertical Slice
-
-The public alpha is artifact-first. To reproduce the scientific chain, provide
-real manifests, native feature arrays, SAE checkpoints, and dense targets.
+For expected score ranges and qualitative checks, see `docs/expected_results.md`.
 
 Set paths:
 
@@ -273,8 +231,61 @@ python -m feature_economy.cli.main make-figures \
   --formats png,pdf
 ```
 
+## 4. Optional: Full Saved-Array Audit Bundle
+
+The first public v1 saved-array audit bundle is distributed as split GitHub
+Release assets. It contains archived paper-used features, SAE codes, probe
+outputs, and generated tables. It is useful for auditing and debugging, but it
+is not required for the default rerun path.
+
+Download every part and checksum file:
+
+```bash
+gh release download v1-saved-array-20260513 \
+  --repo sellerbubble/dino-ijepa-sae-feature-economy-repro \
+  --pattern 'feature_economy_artifacts_v1*'
+```
+
+Reassemble and verify:
+
+```bash
+cat feature_economy_artifacts_v1.tar.gz.part-* > feature_economy_artifacts_v1.tar.gz
+sha256sum -c feature_economy_artifacts_v1.tar.gz.sha256
+tar -xzf feature_economy_artifacts_v1.tar.gz
+export ARTIFACT_ROOT=$PWD/public_repro_feature_economy_v1_candidate
+export PYTHONPATH=$PWD/src
+```
+
+Then verify the unpacked bundle and regenerate public tables:
+
+```bash
+python -m feature_economy.cli.main check-bundle \
+  --run-plan-json "$ARTIFACT_ROOT/run_plan/reproduction_run_plan.json" \
+  --artifact-root "$ARTIFACT_ROOT" \
+  --output-json "$ARTIFACT_ROOT/run_plan/artifact_bundle_check_local.json" \
+  --require-complete
+
+python -m feature_economy.cli.main index-artifacts \
+  --input-dir "$ARTIFACT_ROOT" \
+  --output-json "$ARTIFACT_ROOT/index/artifact_index_local.json" \
+  --output-csv "$ARTIFACT_ROOT/index/artifact_index_local.csv" \
+  --require-valid
+
+python -m feature_economy.cli.main make-tables \
+  --artifact-index "$ARTIFACT_ROOT/index/artifact_index_local.json" \
+  --output-dir "$ARTIFACT_ROOT/tables_local"
+```
+
+Expected current audit-bundle status:
+
+- `66/66` run-plan rows complete;
+- `190/190` indexed artifacts valid;
+- generated tables for probe scores, Availability, Access, and Allocation.
+
 ## 5. What This Does Not Claim
 
-This quickstart does not reproduce private paper-scale training loops from raw
-datasets. It reproduces the public saved-array/lightweight analysis chain. See
-`docs/public_release_audit_20260513.md` for the current release boundary.
+This quickstart does not redistribute datasets, model weights, SAE checkpoints,
+or private paper-scale training loops. It provides a public path for rerunning
+the feature extraction, SAE-code extraction, probe, and AAA analysis chain under
+documented configs. See `docs/public_release_audit_20260513.md` for the current
+release boundary.

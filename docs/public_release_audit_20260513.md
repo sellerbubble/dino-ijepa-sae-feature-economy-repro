@@ -20,8 +20,9 @@ The public repo should let external readers:
 8. add new models, layers, tasks, SAEs, and analyses without copying private
    workbench scripts.
 
-The current public target is an artifact-first/lightweight reproduction chain.
-It is not yet an exact paper-scale training reproduction.
+The current public target is a lightweight executable rerun chain with optional
+saved-array audit support. It is not intended to be an exact private
+paper-scale training reproduction.
 The intended public v1 boundary is fixed in `docs/public_v1_scope.md`.
 
 ## Prompt-To-Artifact Checklist
@@ -30,8 +31,9 @@ The intended public v1 boundary is fixed in `docs/public_v1_scope.md`.
 | --- | --- | --- | --- |
 | One-command smoke chain | `scripts/reproduce_smoke.sh` | Verified by full smoke run on 2026-05-13. It runs tests, config/model/manifest checks, fixture probes, dense saved-array probes, feature/code extraction, toy TorchScript extraction, AAA analyses, artifact indexing, tables, and optional figures. | Smoke uses tiny fixtures, not scientific results. |
 | Tiny complete artifact bundle | `scripts/build_tiny_artifact_bundle.sh` | Verified locally on 2026-05-13. It builds one DINO/ImageNet SAE vertical slice, passes `check-bundle --require-complete` with 9/9 rows complete, indexes 24/24 valid artifacts, and exports CSV tables. | Uses fixture features/codes and tiny labels; it demonstrates contract completion, not scientific performance. |
-| Release artifact bundle layout | `docs/release_artifact_bundle_layout.md` | Documents expected top-level directories, required files by run-plan stage, validation commands, and publishing checklist for real saved-array release assets. | Does not itself provide real paper artifacts. |
-| First real saved-array bundle plan | `docs/first_real_saved_array_bundle_plan.md` | Defines the public v1 model/task/SAE matrix, expected 66 run-plan rows, task-level staging profiles, acceptance gates, and an export checklist for the first real release asset. Updated with the first full public v1 candidate: `66/66` rows complete, `190/190` valid indexed artifacts, sanitized archive packaged, and 15 GitHub-release-sized split parts created. | Keep this document synchronized with future release asset layouts. |
+| Expected results | `docs/expected_results.md` | Defines reference scores, qualitative acceptance bands, and the difference between approximate reruns and bit-identical audit bundles. | Bands are practical sanity checks, not formal statistical confidence intervals. |
+| Release artifact bundle layout | `docs/release_artifact_bundle_layout.md` | Documents expected top-level directories, required files by run-plan stage, validation commands, and publishing checklist for optional saved-array audit assets. | Does not itself provide real paper artifacts. |
+| First real saved-array bundle plan | `docs/first_real_saved_array_bundle_plan.md` | Defines the public v1 model/task/SAE matrix, expected 66 run-plan rows, task-level staging profiles, acceptance gates, and an export checklist for the optional audit release asset. Updated with the first full public v1 candidate: `66/66` rows complete, `190/190` valid indexed artifacts, sanitized archive packaged, and 15 GitHub-release-sized split parts created. | Keep this document synchronized with future release asset layouts. |
 | Artifact export manifest template | `scripts/create_artifact_export_manifest.py` | Converts a generated run plan into a CSV/JSON handoff sheet with one row per public artifact target, required files, source placeholder, conversion flag, and validation hint. | Maintainers still need to fill concrete source artifact paths from the private workbench. |
 | Artifact export manifest audit | `scripts/audit_artifact_export_manifest.py` | Read-only audit of a filled export manifest; checks status values, source directories, required source files, and resolved public target paths. | Does not copy files; it only gates whether the manifest is safe to act on. |
 | Artifact export copy gate | `scripts/copy_artifact_export_manifest.py` | Copies only required files for manifest rows marked `READY` or `COPIED`, with dry-run support and overwrite refusal by default. | Does not convert artifact formats; rows marked `NEEDS_CONVERSION` remain a separate step unless explicitly included. |
@@ -40,7 +42,7 @@ The intended public v1 boundary is fixed in `docs/public_v1_scope.md`.
 | One-command artifact staging | `scripts/stage_artifact_bundle_from_manifest.sh` | Chains manifest audit, controlled copy, bundle completeness check, artifact indexing, table export, README generation, sanitizer-aware release packaging, and optional figure export. | Requires a filled manifest whose rows match the run plan; partial releases need a subset run plan. |
 | Release hygiene checker | `scripts/check_public_release.py` | Verified locally on 2026-05-13. Checks required files, executable bits, Markdown fences, README links, and private-path markers with an explicit allowlist. | Does not prove scientific metric correctness. |
 | Standalone repo export | `scripts/export_public_repo.sh` | Copies the curated public slice into a clean standalone working tree, excludes caches/generated local artifact directories, and runs the release hygiene checker on the exported tree. Verified on 2026-05-13 by exporting to `/tmp`, running 113 unit tests, running `check_public_release.py`, and building the tiny artifact bundle from the exported tree. | Does not initialize git, push to GitHub, or attach real saved-array release assets. |
-| Saved-array release packaging | `scripts/package_artifact_bundle.sh`, `scripts/split_release_archive.py` | Validates a completed artifact root, rebuilds index/tables, scans or rewrites text metadata for private absolute paths, and emits a tar.gz archive, SHA256 checksum, release manifest, and checksummed split parts. The first full public v1 saved-array candidate packaged successfully on 2026-05-13 with `0` remaining private-path hits and was uploaded to the public GitHub Release. | A clean-machine download/unpack smoke check remains useful before announcing widely. |
+| Saved-array release packaging | `scripts/package_artifact_bundle.sh`, `scripts/split_release_archive.py` | Validates a completed artifact root, rebuilds index/tables, scans or rewrites text metadata for private absolute paths, and emits a tar.gz archive, SHA256 checksum, release manifest, and checksummed split parts. The first full public v1 saved-array candidate packaged successfully on 2026-05-13 with `0` remaining private-path hits and was uploaded to the public GitHub Release. | This is an optional audit path, not the default user workflow. |
 | Standalone public CI | `.github/workflows/ci.yml` | Runs unit tests, release hygiene, `scripts/reproduce_smoke.sh`, and `scripts/build_tiny_artifact_bundle.sh` when `public_repro` is exported as a repository root. | Not executed by GitHub until the public repo/export is created. |
 | Runtime/config/model gates | `check-runtime`, `check-configs`, `check-models` | Command help inspected; smoke executes all three. | Real checkpoint existence is only enforced when users pass `--require-resolved-checkpoints`. |
 | Run matrix planning | `plan-runs`, `reproduction_run_plan.json`, `reproduction_run_plan.csv` | Unit-tested and smoke-tested; expands native, SAE, availability, Access, and Allocation rows from public configs. | This is a launch checklist, not an executor. |
@@ -59,26 +61,26 @@ The intended public v1 boundary is fixed in `docs/public_v1_scope.md`.
 | Artifact provenance | `index-artifacts`, `run_manifest.json`, schema validators, `current_git_commit()` | Smoke indexes each artifact family with `--require-valid`; array validation reports are valid index records; run manifests record the current git commit or `FEATURE_ECONOMY_GIT_COMMIT` override. | Falls back to `"unknown"` only when no git metadata or override is available. |
 | Tables | `make-tables`, `paper/tables.py` | Smoke exports probe, availability, subset usage, and ablation CSV tables. | Final manuscript formatting is separate from reproducibility CSV export. |
 | Figures | `make-figures`, `paper/figures.py` | Smoke exports overview figures when matplotlib is installed. | Final designed paper figures are not included. |
-| Quickstart path | `docs/release_quickstart.md` | Provides a 5-minute smoke path and a compact real saved-array vertical slice. | Still points to the full runbook for multi-task/multi-model runs. |
+| Quickstart path | `docs/release_quickstart.md` | Provides a 5-minute smoke path, a compact real lightweight vertical slice, and an optional audit-bundle path. | Still points to the full runbook for multi-task/multi-model runs. |
 | Extension path | `docs/extending_models_tasks.md`, config directories, TorchScript export guide | Docs describe adding models, SAEs, tasks, and analyses through configs/adapters. | Needs more examples once a second real model/layer/task is added publicly. |
 
 ## Release Verdict
 
-Current status: **public alpha is executable for a saved-array, lightweight
-reproduction chain, and the first full public v1 saved-array release candidate
-has passed local/remote packaging gates**.
+Current status: **public alpha is executable for a lightweight rerun chain, and
+the first full public v1 saved-array release candidate is available as an
+optional audit artifact**.
 
 It is suitable for:
 
 - validating the public command surface;
-- demonstrating the paper evidence chain on fixtures and saved arrays;
-- allowing external users to plug in exported DINO/I-JEPA features, SAE codes,
-  and probe outputs under documented contracts;
+- demonstrating the paper evidence chain on fixtures and user-generated arrays;
+- allowing external users to generate or plug in DINO/I-JEPA features, SAE
+  codes, and probe outputs under documented contracts;
 - extending the project through configs and thin adapters.
 
 It is not yet suitable for claiming:
 
-- exact paper-scale reproduction from raw datasets and raw checkpoints;
+- bit-identical reproduction of private paper-scale intermediate arrays;
 - official raw I-JEPA checkpoint loading;
 - private training-loop equivalence;
 - final manuscript figure reproduction.
@@ -88,7 +90,7 @@ It is not yet suitable for claiming:
 1. Export the standalone repository tree with `scripts/export_public_repo.sh`,
    initialize a public GitHub repository from that tree, and let the standalone
    CI run before publishing saved-array assets.
-2. Run a clean-machine download/unpack smoke check from the public GitHub
-   Release assets.
+2. Run a clean-machine lightweight rerun on at least one real public
+   model/task/SAE slice.
 3. Revisit exact paper-scale probe training only if the escalation rule in
    `docs/public_v1_scope.md` is satisfied.
