@@ -19,6 +19,7 @@ from pathlib import Path
 
 REQUIRED_FILES = [
     "README.md",
+    "AGENTS.md",
     "pyproject.toml",
     ".gitignore",
     ".github/workflows/ci.yml",
@@ -42,6 +43,9 @@ REQUIRED_FILES = [
     "docs/first_real_saved_array_bundle_plan.md",
     "docs/reproduction_status.md",
     "docs/public_release_audit_20260513.md",
+    "docs/AGENTS.md",
+    "docs/experiment_matrix.md",
+    "configs/AGENTS.md",
     "configs/models/dino_v2_base.yaml",
     "configs/models/ijepa_vit_h14.yaml",
     "configs/saes/dino_l3_topk32_exp4.yaml",
@@ -60,6 +64,9 @@ REQUIRED_FILES = [
     "configs/tasks/ade20k.yaml",
     "configs/tasks/clevr_count.yaml",
     "configs/advanced/module_f_native_ablation_nyuv2.yaml",
+    "scripts/AGENTS.md",
+    "src/feature_economy/AGENTS.md",
+    "tests/AGENTS.md",
 ]
 
 REQUIRED_EXECUTABLES = [

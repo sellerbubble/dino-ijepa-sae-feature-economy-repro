@@ -61,6 +61,9 @@ Use `docs/reproduction_status.md` for current coverage and known gaps.
 Use `docs/public_v1_scope.md` for the release boundary: public v1 is a full
 paper-style rerun repo with smoke tests for code health and optional saved-array
 audit support, not a private-cluster training-loop dump.
+Use `AGENTS.md` and the nested `AGENTS.md` files for agent-facing maintenance
+rules. Use `docs/experiment_matrix.md` for the current 149-row configured
+experiment matrix.
 
 ## Main Reproduction Path
 
