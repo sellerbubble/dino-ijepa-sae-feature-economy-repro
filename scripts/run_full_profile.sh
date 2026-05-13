@@ -21,6 +21,13 @@ RIDGE="${RIDGE:-0.001}"
 MAX_EXAMPLES="${MAX_EXAMPLES:-}"
 LOCAL_FILES_ONLY="${LOCAL_FILES_ONLY:-0}"
 MAKE_FIGURES="${MAKE_FIGURES:-1}"
+if [[ -z "${CONTRIBUTION_SCORING_METHOD:-}" ]]; then
+  if [[ "${PROFILE}" == "dino_imagenet_l11" ]]; then
+    CONTRIBUTION_SCORING_METHOD="true_class_logit_drop"
+  else
+    CONTRIBUTION_SCORING_METHOD="exact_metric_drop"
+  fi
+fi
 
 usage() {
   cat <<'EOF'
@@ -39,6 +46,9 @@ Environment:
   MAX_EXAMPLES=1000     Optional small real-data slice.
   LOCAL_FILES_ONLY=1    Pass --local-files-only to HuggingFace extraction.
   DINO_HF_NAME_OR_PATH  Optional local DINO checkpoint directory or HF model id.
+  CONTRIBUTION_SCORING_METHOD=true_class_logit_drop
+                         Feature contribution scoring method. Use
+                         exact_metric_drop for small exact audit runs.
   MAKE_FIGURES=0        Skip overview figure export.
 
 Supported profiles:
@@ -265,6 +275,7 @@ run python -m feature_economy.cli.main compute-contributions \
   --task-id "$TASK_ID" \
   --model-id "$MODEL_ID" \
   --sae-id "$SAE_ID" \
+  --scoring-method "$CONTRIBUTION_SCORING_METHOD" \
   --output-dir "$CONTRIBUTION_DIR"
 
 run python -m feature_economy.cli.main rank-features \
@@ -321,6 +332,7 @@ profile=$PROFILE
 model_id=$MODEL_ID
 sae_id=$SAE_ID
 task_id=$TASK_ID
+contribution_scoring_method=$CONTRIBUTION_SCORING_METHOD
 artifact_root=$ARTIFACT_ROOT
 manifest=$MANIFEST
 sae_checkpoint=$SAE_CHECKPOINT

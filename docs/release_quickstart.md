@@ -84,6 +84,10 @@ export LOCAL_FILES_ONLY=1
 bash scripts/run_full_profile.sh dino_imagenet_l11
 ```
 
+For the classification vertical slice, contribution scoring defaults to the
+scalable `true_class_logit_drop` method. To run a small exact audit instead, set
+`CONTRIBUTION_SCORING_METHOD=exact_metric_drop`.
+
 Set paths:
 
 ```bash

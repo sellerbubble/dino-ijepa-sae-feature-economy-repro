@@ -100,6 +100,12 @@ export LOCAL_FILES_ONLY=1
 bash scripts/run_full_profile.sh dino_imagenet_l11
 ```
 
+The launcher defaults classification contribution scoring to
+`true_class_logit_drop`, a scalable channel-level score used to build the hybrid
+Access ranking. For small audit runs where runtime is not a concern, set
+`CONTRIBUTION_SCORING_METHOD=exact_metric_drop` to rerun the task metric after
+each single-feature ablation.
+
 This first public launcher is intentionally conservative: it starts with one
 vertical slice and preserves the same artifact layout expected by the broader
 paper-style chain. Additional model, layer, task, and SAE profiles should extend
