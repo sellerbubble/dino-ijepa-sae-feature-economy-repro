@@ -13,8 +13,16 @@ from feature_economy.probes import (
     train_sae_paper_scale_probe,
 )
 
+try:
+    import torch  # noqa: F401
+
+    HAS_TORCH = True
+except ImportError:
+    HAS_TORCH = False
+
 
 class LinearProbeTests(unittest.TestCase):
+    @unittest.skipUnless(HAS_TORCH, "paper-scale torch probe tests require PyTorch")
     def test_train_native_paper_scale_probe_classification(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             tmpdir = Path(tmpdir)
@@ -71,6 +79,7 @@ class LinearProbeTests(unittest.TestCase):
             self.assertTrue((tmpdir / "probe" / "probe_outputs.npz").exists())
             self.assertTrue((tmpdir / "probe" / "probe_logits.npz").exists())
 
+    @unittest.skipUnless(HAS_TORCH, "paper-scale torch probe tests require PyTorch")
     def test_train_sae_paper_scale_probe_counting(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             tmpdir = Path(tmpdir)
