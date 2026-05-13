@@ -227,7 +227,7 @@ def _fit_classification_probe(
     task_type: str,
     ridge: float,
 ) -> tuple[dict[str, float], dict[str, np.ndarray]]:
-    flat = features.reshape(features.shape[0], -1)
+    flat = _classification_readout_features(features)
     classes = np.unique(labels)
     if classes.size < 2:
         raise ValueError("linear probe requires at least two classes")
@@ -246,6 +246,25 @@ def _fit_classification_probe(
         "labels": labels,
     }
     return metrics, arrays
+
+
+def _classification_readout_features(features: np.ndarray) -> np.ndarray:
+    """Return one feature vector per example for classification probes.
+
+    Public full-profile feature extraction stores token maps such as
+    `[batch, tokens, dim]` for native backbones and `[batch, tokens, code_dim]`
+    for SAE codes. Flattening tokens into the readout makes tiny real-data
+    checks numerically huge and breaks feature-level ranking. Mean-pooling over
+    non-feature axes keeps the final dimension as the interpretable channel
+    basis used by Access and Allocation analyses.
+    """
+
+    if features.ndim < 2:
+        raise ValueError("classification features must have shape [num_examples, feature_dim]")
+    if features.ndim == 2:
+        return features
+    axes = tuple(range(1, features.ndim - 1))
+    return np.mean(features, axis=axes)
 
 
 def _fit_dense_probe(

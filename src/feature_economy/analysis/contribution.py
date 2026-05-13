@@ -19,6 +19,7 @@ from feature_economy.artifacts import (
 )
 
 from .ablation import (
+    _classification_readout_codes,
     _evaluate_probe_arrays,
     _labels_to_class_indices,
     _performance_drop,
@@ -232,10 +233,10 @@ def _true_class_logit_drop_scores(
     labels = np.asarray(probe["labels"], dtype=np.int64)
     classes = np.asarray(probe["classes"], dtype=np.int64)
     class_indices = _labels_to_class_indices(labels, classes)
-    flat = codes.reshape(codes.shape[0], -1)
+    flat = _classification_readout_codes(codes, weights)
     if weights.shape[0] != flat.shape[1] + 1:
         raise ValueError(
-            f"weight rows ({weights.shape[0]}) must equal flattened code dim + bias "
+            f"weight rows ({weights.shape[0]}) must equal classification readout dim + bias "
             f"({flat.shape[1] + 1})"
         )
     feature_weights_for_label = weights[: flat.shape[1], class_indices].T

@@ -39,10 +39,10 @@ The full paper-style chain is:
 ```text
 validate configs/manifests/runtime
   -> extract native backbone features
-  -> train/evaluate native probes
+  -> train/evaluate native probes with task-appropriate readout pooling
   -> convert/load SAE checkpoints
   -> extract SAE codes
-  -> train/evaluate SAE-code probes
+  -> train/evaluate SAE-code probes with task-appropriate readout pooling
   -> compute Availability
   -> rank task-recruited features and compute Access
   -> run Allocation ablations
@@ -105,6 +105,12 @@ vertical slice and preserves the same artifact layout expected by the broader
 paper-style chain. Additional model, layer, task, and SAE profiles should extend
 this launcher or add sibling profiles rather than creating unrelated one-off
 scripts.
+
+For classification-style tasks, the public linear probe mean-pools token maps
+over non-feature axes before fitting the closed-form readout. This keeps the
+readout dimension equal to the native hidden dimension or SAE feature dimension,
+which is required for feature ranking and ablation to remain channel-level
+analyses rather than token-by-channel flattened analyses.
 
 ## Output Layout
 

@@ -173,7 +173,16 @@ python -m feature_economy.cli.main probe-sae \
   --sae-id dino_l11_topk32_exp4 \
   --expected-split val \
   --output-dir "$ARTIFACT_ROOT/probes/sae/dino_l11_topk32_exp4/imagenet_val"
+```
 
+For classification and counting, the public linear-probe backend mean-pools
+token maps before fitting the readout. The saved probe weights therefore stay
+aligned with the final native feature dimension or SAE code dimension, which is
+what the downstream ranking and ablation commands expect.
+
+Continue with Availability, Access, ranking-sensitivity, and Allocation:
+
+```bash
 python -m feature_economy.cli.main compute-usage \
   --config-root configs \
   --codes-npz "$ARTIFACT_ROOT/codes/dino_l11_topk32_exp4/imagenet_val/codes.npz" \

@@ -129,6 +129,51 @@ class ContributionTests(unittest.TestCase):
             self.assertGreater(float(scores[1]), 0.0)
             self.assertEqual(float(scores[2]), 0.0)
 
+    def test_compute_classification_contribution_scores_with_pooled_token_codes(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmpdir = Path(tmpdir)
+            codes_path = tmpdir / "codes.npz"
+            probe_path = tmpdir / "probe_logits.npz"
+            codes = np.asarray(
+                [
+                    [[2.0, 0.0], [2.0, 0.0]],
+                    [[2.0, 0.0], [2.0, 0.0]],
+                    [[0.0, 2.0], [0.0, 2.0]],
+                    [[0.0, 2.0], [0.0, 2.0]],
+                ],
+                dtype=np.float32,
+            )
+            weights = np.asarray(
+                [[2.0, -2.0], [-2.0, 2.0], [0.0, 0.0]],
+                dtype=np.float32,
+            )
+            np.savez(codes_path, codes=codes)
+            np.savez(
+                probe_path,
+                weights=weights,
+                logits=np.zeros((4, 2), dtype=np.float32),
+                classes=np.asarray([0, 1], dtype=np.int64),
+                labels=np.asarray([0, 0, 1, 1], dtype=np.int64),
+            )
+
+            summary_path = compute_linear_probe_contribution_scores(
+                codes_npz=codes_path,
+                probe_logits_npz=probe_path,
+                task_type="classification",
+                task_id="tiny_cls",
+                model_id="dino_v2_base",
+                sae_id="dino_l11_topk32_exp4",
+                output_dir=tmpdir / "contribution",
+                scoring_method="true_class_logit_drop",
+            )
+            summary = json.loads(summary_path.read_text(encoding="utf-8"))
+            self.assertEqual(summary["scored_features"], 2)
+            scores = np.load(tmpdir / "contribution" / "contribution_scores.npz")[
+                "validation_contribution_score"
+            ]
+            self.assertGreater(float(scores[0]), 0.0)
+            self.assertGreater(float(scores[1]), 0.0)
+
     def test_compute_dense_weight_activation_contribution_scores(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             tmpdir = Path(tmpdir)

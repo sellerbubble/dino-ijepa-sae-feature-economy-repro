@@ -35,6 +35,52 @@ class AblationTests(unittest.TestCase):
             )
             self.assertEqual(index["num_valid"], 2)
 
+    def test_ablate_linear_probe_features_with_pooled_token_codes(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmpdir = Path(tmpdir)
+            codes_path = tmpdir / "codes.npz"
+            logits_path = tmpdir / "probe_logits.npz"
+            ranking_path = tmpdir / "task_feature_ranking.json"
+            codes = np.asarray(
+                [
+                    [[1.0, 0.0], [1.0, 0.0]],
+                    [[1.0, 0.0], [1.0, 0.0]],
+                    [[0.0, 1.0], [0.0, 1.0]],
+                    [[0.0, 1.0], [0.0, 1.0]],
+                ],
+                dtype=np.float32,
+            )
+            weights = np.asarray(
+                [[2.0, -2.0], [-2.0, 2.0], [0.0, 0.0]],
+                dtype=np.float32,
+            )
+            pooled = codes.mean(axis=1)
+            logits = np.concatenate(
+                [pooled, np.ones((pooled.shape[0], 1), dtype=np.float32)],
+                axis=1,
+            ) @ weights
+            np.savez_compressed(codes_path, codes=codes)
+            np.savez_compressed(
+                logits_path,
+                logits=logits,
+                weights=weights,
+                classes=np.asarray([0, 1], dtype=np.int64),
+                labels=np.asarray([0, 0, 1, 1], dtype=np.int64),
+            )
+            _write_ranking(ranking_path, task_id="tiny_cls", feature_ids=[0])
+            summary_path = ablate_linear_probe_features(
+                codes_npz=codes_path,
+                probe_logits_npz=logits_path,
+                ranking_json=ranking_path,
+                task_type="classification",
+                output_dir=tmpdir / "ablation",
+                top_k=1,
+                random_seed=0,
+            )
+            record = json.loads(summary_path.read_text())
+            validate_ablation_summary(record)
+            self.assertGreater(record["ablations"][0]["metric_delta"]["top1"], 0.0)
+
     def test_ablate_dense_depth_features(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             tmpdir = Path(tmpdir)

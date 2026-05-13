@@ -143,14 +143,29 @@ def ablate_linear_probe_features(
 
 
 def _linear_logits(codes: np.ndarray, weights: np.ndarray) -> np.ndarray:
-    flat = codes.reshape(codes.shape[0], -1)
+    flat = _classification_readout_codes(codes, weights)
     if weights.shape[0] != flat.shape[1] + 1:
         raise ValueError(
-            f"weight rows ({weights.shape[0]}) must equal flattened code dim + bias "
+            f"weight rows ({weights.shape[0]}) must equal classification readout dim + bias "
             f"({flat.shape[1] + 1})"
         )
     design = np.concatenate([flat, np.ones((flat.shape[0], 1))], axis=1)
     return design @ weights
+
+
+def _classification_readout_codes(codes: np.ndarray, weights: np.ndarray) -> np.ndarray:
+    """Match classification ablation readout to the saved linear-probe weights."""
+
+    if codes.ndim < 2:
+        raise ValueError("codes must have shape [num_examples, ..., num_features]")
+    flattened = codes.reshape(codes.shape[0], -1)
+    if weights.shape[0] == flattened.shape[1] + 1:
+        return flattened
+    if codes.ndim > 2:
+        pooled = np.mean(codes, axis=tuple(range(1, codes.ndim - 1)))
+        if weights.shape[0] == pooled.shape[1] + 1:
+            return pooled
+    return flattened
 
 
 def _dense_linear_output(codes: np.ndarray, weights: np.ndarray) -> np.ndarray:

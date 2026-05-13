@@ -101,6 +101,46 @@ class LinearProbeTests(unittest.TestCase):
             self.assertNotIn("sae_id", record)
             self.assertAlmostEqual(record["metrics"]["top1"], 1.0)
 
+    def test_train_sae_linear_probe_pools_token_codes_for_classification(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmpdir = Path(tmpdir)
+            codes_path = tmpdir / "codes.npz"
+            manifest_path = tmpdir / "manifest.jsonl"
+            codes = np.asarray(
+                [
+                    [[2.0, 0.0], [2.0, 0.0]],
+                    [[1.5, 0.1], [1.5, 0.1]],
+                    [[0.0, 2.0], [0.0, 2.0]],
+                    [[0.1, 1.5], [0.1, 1.5]],
+                ],
+                dtype=np.float32,
+            )
+            np.savez(codes_path, codes=codes)
+            rows = [
+                {"image": "a.jpg", "split": "val", "label": 0},
+                {"image": "b.jpg", "split": "val", "label": 0},
+                {"image": "c.jpg", "split": "val", "label": 1},
+                {"image": "d.jpg", "split": "val", "label": 1},
+            ]
+            manifest_path.write_text(
+                "\n".join(json.dumps(row) for row in rows) + "\n",
+                encoding="utf-8",
+            )
+            summary_path = train_sae_linear_probe(
+                codes_npz=codes_path,
+                manifest_path=manifest_path,
+                task_type="classification",
+                task_id="tiny_cls",
+                model_id="dino_v2_base",
+                sae_id="dino_l11_topk32_exp4",
+                output_dir=tmpdir / "probe",
+                expected_split="val",
+            )
+            record = json.loads(summary_path.read_text())
+            self.assertAlmostEqual(record["metrics"]["top1"], 1.0)
+            probe = np.load(tmpdir / "probe" / "probe_logits.npz")
+            self.assertEqual(probe["weights"].shape[0], codes.shape[-1] + 1)
+
     def test_train_sae_linear_probe_dense_depth(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             tmpdir = Path(tmpdir)
