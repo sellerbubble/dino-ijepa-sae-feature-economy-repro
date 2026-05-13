@@ -74,6 +74,13 @@ feature-economy convert-sae-checkpoint \
   --output-checkpoint /path/to/lightweight_sae.npz
 ```
 
+The converter includes lightweight pickle stubs for legacy `vit_prisma`
+checkpoints so public reproduction can extract tensor attributes without
+installing the full SAE training package tree. This path is intended only for
+dependency-light inference conversion; if a checkpoint uses a different
+activation mechanism, add a dedicated public backend instead of silently
+pretending it is a linear TopK SAE.
+
 Gated SAE checkpoints are rejected by default because their activation path is
 not equivalent to the linear TopK backend. Add a dedicated gated backend before
 using gated checkpoints for paper reproduction.

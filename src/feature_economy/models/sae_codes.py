@@ -7,7 +7,12 @@ inference-only linear TopK SAE checkpoint format.
 
 from __future__ import annotations
 
+import importlib.abc
+import importlib.machinery
 import json
+import sys
+import types
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
 
@@ -201,6 +206,15 @@ def _extract_state_dict(raw: dict[str, Any]) -> dict[str, Any]:
         autoencoder = raw["autoencoder"]
         if "state_dict" in autoencoder and isinstance(autoencoder["state_dict"], dict):
             return autoencoder["state_dict"]
+        return autoencoder
+    if "autoencoder" in raw and hasattr(raw["autoencoder"], "state_dict"):
+        return _torch_to_numpy_mapping(raw["autoencoder"].state_dict())
+    if "autoencoder" in raw and hasattr(raw["autoencoder"], "__dict__"):
+        return _torch_to_numpy_mapping(vars(raw["autoencoder"]))
+    if hasattr(raw, "state_dict"):
+        return _torch_to_numpy_mapping(raw.state_dict())
+    if hasattr(raw, "__dict__"):
+        return _torch_to_numpy_mapping(vars(raw))
     return raw
 
 
@@ -406,8 +420,18 @@ def _load_torch_checkpoint(path: Path) -> dict[str, np.ndarray]:
         loaded = torch.load(path, map_location="cpu", weights_only=False)
     except TypeError:  # pragma: no cover - for older torch versions
         loaded = torch.load(path, map_location="cpu")
+    except ModuleNotFoundError as exc:
+        if "vit_prisma" not in str(exc):
+            raise
+        with _vit_prisma_pickle_stubs():
+            loaded = torch.load(path, map_location="cpu", weights_only=False)
     if not isinstance(loaded, dict):
-        raise ValueError(".pt SAE checkpoint must contain a mapping")
+        if hasattr(loaded, "state_dict"):
+            loaded = loaded.state_dict()
+        elif hasattr(loaded, "__dict__"):
+            loaded = vars(loaded)
+        else:
+            raise ValueError(".pt SAE checkpoint must contain a mapping")
     return _torch_to_numpy_mapping(loaded)
 
 
@@ -416,7 +440,83 @@ def _torch_to_numpy_mapping(value: Any) -> Any:
         return {key: _torch_to_numpy_mapping(nested) for key, nested in value.items()}
     if hasattr(value, "detach"):
         return value.detach().cpu().numpy()
+    if hasattr(value, "state_dict"):
+        return _torch_to_numpy_mapping(value.state_dict())
+    if hasattr(value, "__dict__") and value.__class__.__module__.startswith("vit_prisma"):
+        return _torch_to_numpy_mapping(vars(value))
     return value
+
+
+@contextmanager
+def _vit_prisma_pickle_stubs():
+    """Temporarily install lightweight modules for legacy vit_prisma pickles.
+
+    Some private SAE checkpoints pickle a `vit_prisma` autoencoder object even
+    though the tensors needed for public inference are just attributes or a
+    state dict. Public reproduction should not require installing the full
+    training package tree merely to read those tensors.
+    """
+
+    finder = _VitPrismaStubFinder()
+    previous_modules = {
+        name: module
+        for name, module in sys.modules.items()
+        if name == "vit_prisma" or name.startswith("vit_prisma.")
+    }
+    sys.meta_path.insert(0, finder)
+    try:
+        yield
+    finally:
+        try:
+            sys.meta_path.remove(finder)
+        except ValueError:  # pragma: no cover - defensive cleanup
+            pass
+        for name in [
+            name
+            for name in list(sys.modules)
+            if name == "vit_prisma" or name.startswith("vit_prisma.")
+        ]:
+            if name in previous_modules:
+                sys.modules[name] = previous_modules[name]
+            else:
+                sys.modules.pop(name, None)
+
+
+class _VitPrismaStubFinder(importlib.abc.MetaPathFinder, importlib.abc.Loader):
+    def find_spec(self, fullname: str, path: Any = None, target: Any = None):
+        if fullname == "vit_prisma" or fullname.startswith("vit_prisma."):
+            return importlib.machinery.ModuleSpec(fullname, self, is_package=True)
+        return None
+
+    def create_module(self, spec):
+        module = types.ModuleType(spec.name)
+        module.__path__ = []
+
+        def __getattr__(name: str):
+            return _make_pickle_stub_class(spec.name, name)
+
+        module.__getattr__ = __getattr__  # type: ignore[attr-defined]
+        return module
+
+    def exec_module(self, module):
+        return None
+
+
+def _make_pickle_stub_class(module_name: str, class_name: str):
+    def __setstate__(self, state):
+        if isinstance(state, dict):
+            self.__dict__.update(state)
+        else:
+            self.__dict__["_pickle_state"] = state
+
+    return type(
+        class_name,
+        (),
+        {
+            "__module__": module_name,
+            "__setstate__": __setstate__,
+        },
+    )
 
 
 def _contains_any(mapping: dict[str, Any], keys: list[str]) -> bool:

@@ -1,5 +1,7 @@
 import json
+import sys
 import tempfile
+import types
 import unittest
 from pathlib import Path
 
@@ -158,6 +160,55 @@ class SaeCodeTests(unittest.TestCase):
         self.assertEqual(checkpoint["encoder_weight"].shape, (4, 6))
         self.assertEqual(checkpoint["encoder_bias"].tolist(), [0, 1, 2, 3, 4, 5])
         self.assertEqual(checkpoint["decoder_bias"].tolist(), [0, 1, 2, 3])
+
+    def test_convert_vit_prisma_pickled_autoencoder_to_lightweight_npz(self):
+        try:
+            import torch
+        except Exception:  # pragma: no cover - depends on optional dependency
+            self.skipTest("torch is not installed")
+
+        module_name = "vit_prisma.fake_sae"
+        package = types.ModuleType("vit_prisma")
+        package.__path__ = []
+        module = types.ModuleType(module_name)
+        SparseAutoencoder = type(
+            "SparseAutoencoder",
+            (),
+            {"__module__": module_name},
+        )
+        module.SparseAutoencoder = SparseAutoencoder
+        old_modules = {
+            name: sys.modules.get(name)
+            for name in ["vit_prisma", module_name]
+            if name in sys.modules
+        }
+        sys.modules["vit_prisma"] = package
+        sys.modules[module_name] = module
+        try:
+            with tempfile.TemporaryDirectory() as tmpdir:
+                tmpdir = Path(tmpdir)
+                input_checkpoint = tmpdir / "vit_prisma_sae.pt"
+                output_checkpoint = tmpdir / "lightweight_sae.npz"
+                autoencoder = SparseAutoencoder()
+                autoencoder.W_enc = torch.ones(4, 6)
+                autoencoder.b_enc = torch.arange(6, dtype=torch.float32)
+                autoencoder.b_dec = torch.arange(4, dtype=torch.float32)
+                torch.save({"autoencoder": autoencoder}, input_checkpoint)
+                sys.modules.pop(module_name, None)
+                sys.modules.pop("vit_prisma", None)
+                converted = convert_sae_checkpoint_to_lightweight(
+                    input_checkpoint=input_checkpoint,
+                    output_checkpoint=output_checkpoint,
+                )
+                checkpoint = load_lightweight_sae_checkpoint(converted)
+            self.assertEqual(checkpoint["encoder_weight"].shape, (4, 6))
+            self.assertEqual(checkpoint["encoder_bias"].tolist(), [0, 1, 2, 3, 4, 5])
+            self.assertEqual(checkpoint["decoder_bias"].tolist(), [0, 1, 2, 3])
+        finally:
+            sys.modules.pop(module_name, None)
+            sys.modules.pop("vit_prisma", None)
+            for name, old_module in old_modules.items():
+                sys.modules[name] = old_module
 
     def test_convert_rejects_gated_checkpoint_by_default(self):
         try:
