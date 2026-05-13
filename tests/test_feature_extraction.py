@@ -66,7 +66,7 @@ class FeatureExtractionTests(unittest.TestCase):
             self.assertEqual(index["num_valid"], 2)
             self.assertIn("feature_extraction_summary", {r["record_type"] for r in index["records"]})
 
-    def test_huggingface_backend_rejects_non_hf_model_before_loading(self):
+    def test_huggingface_backend_rejects_local_or_hf_model_without_override(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             with self.assertRaises(NotImplementedError):
                 extract_huggingface_features(
@@ -145,6 +145,71 @@ class FeatureExtractionTests(unittest.TestCase):
             self.assertEqual(run_manifest["inputs"]["hf_name"], "/local/dinov2-base")
             arrays = np.load(record["output_npz"])
             self.assertEqual(arrays["features"].shape, (1, 2, 3))
+
+    def test_huggingface_backend_accepts_ijepa_name_or_path_override(self):
+        torch, image_class = _optional_torch_and_pil()
+        if torch is None or image_class is None:
+            self.skipTest("torch and Pillow are required for HuggingFace extraction smoke")
+
+        class FakeModel:
+            def __init__(self):
+                self.loaded_from = None
+
+            def to(self, device):
+                return self
+
+            def eval(self):
+                return self
+
+            def __call__(self, *, pixel_values, output_hidden_states):
+                batch = pixel_values.shape[0]
+                hidden_states = [
+                    torch.zeros((batch, 4, 5), dtype=torch.float32)
+                    for _ in range(33)
+                ]
+                hidden_states[32] = torch.ones((batch, 4, 5), dtype=torch.float32)
+                return type("FakeOutput", (), {"hidden_states": hidden_states})()
+
+        fake_model = FakeModel()
+
+        class FakeAutoModel:
+            @staticmethod
+            def from_pretrained(name_or_path, local_files_only=False):
+                fake_model.loaded_from = name_or_path
+                fake_model.local_files_only = local_files_only
+                return fake_model
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmpdir = Path(tmpdir)
+            image_path = tmpdir / "tiny.png"
+            image_class.new("RGB", (260, 260), color=(32, 64, 128)).save(image_path)
+            manifest_path = tmpdir / "manifest.jsonl"
+            manifest_path.write_text(
+                json.dumps({"image": "tiny.png", "split": "val", "label": 0}) + "\n",
+                encoding="utf-8",
+            )
+            with mock.patch(
+                "feature_economy.models.feature_extraction._import_huggingface_runtime",
+                return_value=(torch, FakeAutoModel),
+            ):
+                summary_path = extract_huggingface_features(
+                    config_root=PUBLIC_REPRO_ROOT / "configs",
+                    manifest_path=manifest_path,
+                    task_type="classification",
+                    model_id="ijepa_vit_h14",
+                    output_dir=tmpdir / "features",
+                    expected_split="val",
+                    batch_size=1,
+                    device="cpu",
+                    max_examples=1,
+                    local_files_only=True,
+                    hf_name_or_path="/local/ijepa-vith14",
+                )
+            record = json.loads(summary_path.read_text())
+            self.assertEqual(fake_model.loaded_from, "/local/ijepa-vith14")
+            self.assertTrue(fake_model.local_files_only)
+            arrays = np.load(record["output_npz"])
+            self.assertEqual(arrays["features"].shape, (1, 4, 5))
 
     def test_torchscript_backend_extracts_real_image_features(self):
         torch, image_class = _optional_torch_and_pil()

@@ -121,10 +121,9 @@ def extract_huggingface_features(
 ) -> Path:
     """Extract hidden states with a HuggingFace vision backbone.
 
-    This is the first real backbone backend in the public repo. It currently
-    supports configs whose `provider` is `huggingface` and whose `hf_name` is
-    set, which covers the public DINOv2 config. Local I-JEPA loading should be
-    added as a separate backend rather than hidden behind this function.
+    This backend supports configs whose `provider` is `huggingface` with a
+    configured `hf_name`, plus `local_or_huggingface` configs when callers pass
+    an explicit local path or model id through `hf_name_or_path`.
     """
 
     if batch_size <= 0:
@@ -133,10 +132,12 @@ def extract_huggingface_features(
         raise ValueError("max_examples must be positive when provided")
     registry = ModelRegistry(config_root)
     model_config = registry.get_model(model_id)
-    if model_config.get("provider") != "huggingface" or not model_config.get("hf_name"):
+    provider = model_config.get("provider")
+    hf_name = hf_name_or_path or model_config.get("hf_name")
+    if provider not in {"huggingface", "local_or_huggingface"} or not hf_name:
         raise NotImplementedError(
-            f"model {model_id} does not define a HuggingFace backbone; "
-            "add hf_name or implement a model-specific loader"
+            f"model {model_id} does not define a HuggingFace backbone path; "
+            "add hf_name, pass --hf-name-or-path, or use the TorchScript backend"
         )
     selected_layer = layer if layer is not None else int(model_config["default_layers"]["last"])
     dataset = ManifestDataset(
@@ -148,7 +149,7 @@ def extract_huggingface_features(
     if not records:
         raise ValueError("no records selected for feature extraction")
 
-    hf_name = str(hf_name_or_path or model_config["hf_name"])
+    hf_name = str(hf_name)
     policy = transform_policy_from_config(dict(model_config["transform"]))
     torch, auto_model = _import_huggingface_runtime()
     model = auto_model.from_pretrained(hf_name, local_files_only=local_files_only)

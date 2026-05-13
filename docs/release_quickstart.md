@@ -84,6 +84,22 @@ export LOCAL_FILES_ONLY=1
 bash scripts/run_full_profile.sh dino_imagenet_l11
 ```
 
+The matched I-JEPA/ImageNet profile uses the same artifact contract. Provide
+either a transformers-compatible checkpoint:
+
+```bash
+export IJEPA_HF_NAME_OR_PATH=/path/to/ijepa-vith14
+export LOCAL_FILES_ONLY=1
+bash scripts/run_full_profile.sh ijepa_imagenet_l31
+```
+
+or an exported TorchScript feature module:
+
+```bash
+export IJEPA_TORCHSCRIPT_CHECKPOINT=/path/to/ijepa_l31_feature_module.pt
+bash scripts/run_full_profile.sh ijepa_imagenet_l31
+```
+
 For the classification vertical slice, contribution scoring defaults to the
 scalable `true_class_logit_drop` method. To run a small exact audit instead, set
 `CONTRIBUTION_SCORING_METHOD=exact_metric_drop`.

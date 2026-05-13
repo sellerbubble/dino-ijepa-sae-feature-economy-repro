@@ -26,7 +26,7 @@ Prepare these resources before running the full chain:
 | Dataset manifests | JSONL files documented in `docs/datasets.md` | One row per image/sample, with stable split metadata. |
 | Dense targets | `.npz` files for NYUv2/ADE20K targets when using saved-array probes | Keep target order aligned with the manifest. |
 | DINO checkpoint | HuggingFace-compatible checkpoint or equivalent feature extractor | Configured by `configs/models/dino_v2_base.yaml`. |
-| I-JEPA checkpoint | Exported TorchScript feature module or externally generated `features.npz` | See `docs/export_torchscript_backbones.md`. |
+| I-JEPA checkpoint | HuggingFace-compatible checkpoint, exported TorchScript feature module, or externally generated `features.npz` | Use `IJEPA_HF_NAME_OR_PATH` for transformers-compatible checkpoints, or see `docs/export_torchscript_backbones.md`. |
 | SAE checkpoints | Public lightweight `.npz` checkpoints or convertible full checkpoints | See `docs/checkpoints.md`. |
 | GPU environment | CUDA-capable environment with PyTorch and optional HuggingFace dependencies | Check with `feature-economy check-runtime --profile experiments`. |
 
@@ -111,6 +111,24 @@ vertical slice and preserves the same artifact layout expected by the broader
 paper-style chain. Additional model, layer, task, and SAE profiles should extend
 this launcher or add sibling profiles rather than creating unrelated one-off
 scripts.
+
+Run the matched I-JEPA/ImageNet vertical slice with a transformers-compatible
+checkpoint:
+
+```bash
+export IJEPA_HF_NAME_OR_PATH=/path/to/ijepa-vith14
+export LOCAL_FILES_ONLY=1
+
+bash scripts/run_full_profile.sh ijepa_imagenet_l31
+```
+
+Or run it with an exported TorchScript feature module:
+
+```bash
+export IJEPA_TORCHSCRIPT_CHECKPOINT=/path/to/ijepa_l31_feature_module.pt
+
+bash scripts/run_full_profile.sh ijepa_imagenet_l31
+```
 
 For classification-style tasks, the public linear probe mean-pools token maps
 over non-feature axes before fitting the closed-form readout. This keeps the
