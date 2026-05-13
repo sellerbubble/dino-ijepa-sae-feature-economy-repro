@@ -170,8 +170,8 @@ def _resize_float_target(target: np.ndarray, shape: tuple[int, int]) -> np.ndarr
         return target
     try:
         from PIL import Image
-    except Exception as exc:  # pragma: no cover - optional runtime dependency
-        raise RuntimeError("resizing dense targets requires Pillow") from exc
+    except Exception:
+        return _resize_nearest_numpy(np.asarray(target), shape).astype(np.float32)
     image = Image.fromarray(np.asarray(target, dtype=np.float32), mode="F")
     return np.asarray(image.resize((shape[1], shape[0]), resample=_pil_resampling(Image, "BILINEAR")))
 
@@ -181,8 +181,8 @@ def _resize_integer_target(target: np.ndarray, shape: tuple[int, int]) -> np.nda
         return target
     try:
         from PIL import Image
-    except Exception as exc:  # pragma: no cover - optional runtime dependency
-        raise RuntimeError("resizing dense targets requires Pillow") from exc
+    except Exception:
+        return _resize_nearest_numpy(np.asarray(target), shape).astype(np.int64)
     image = Image.fromarray(np.asarray(target, dtype=np.int32), mode="I")
     resized = image.resize((shape[1], shape[0]), resample=_pil_resampling(Image, "NEAREST"))
     return np.asarray(resized, dtype=np.int64)
@@ -191,3 +191,13 @@ def _resize_integer_target(target: np.ndarray, shape: tuple[int, int]) -> np.nda
 def _pil_resampling(image_module: Any, name: str) -> int:
     resampling = getattr(image_module, "Resampling", image_module)
     return int(getattr(resampling, name))
+
+
+def _resize_nearest_numpy(target: np.ndarray, shape: tuple[int, int]) -> np.ndarray:
+    """Dependency-light nearest-neighbor resize used when Pillow is unavailable."""
+
+    if target.ndim != 2:
+        raise ValueError(f"dense target resize expects 2D arrays, got shape {target.shape}")
+    row_idx = np.linspace(0, target.shape[0] - 1, shape[0]).round().astype(np.int64)
+    col_idx = np.linspace(0, target.shape[1] - 1, shape[1]).round().astype(np.int64)
+    return target[row_idx[:, None], col_idx[None, :]]
