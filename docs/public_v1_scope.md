@@ -44,7 +44,8 @@ The supported task families are:
 The supported model entry points are:
 
 - DINO-style HuggingFace feature extraction through `extract-features --backend huggingface`.
-- I-JEPA/local model feature extraction through exported TorchScript feature modules.
+- I-JEPA/local model feature extraction through a transformers-compatible local
+  checkpoint when available, or through exported TorchScript feature modules.
 - Externally provided `features.npz` and `codes.npz` arrays that satisfy the
   public contracts, for users who prefer to cache or reuse intermediate arrays.
 
@@ -53,7 +54,8 @@ The supported model entry points are:
 Public v1 does not claim:
 
 - bit-identical reproduction of private paper-scale feature caches;
-- an official raw I-JEPA checkpoint loader;
+- universal raw I-JEPA checkpoint loading across arbitrary upstream checkpoint
+  formats;
 - equivalence to every private probe-training launcher until public paper-style
   runners are ported and validated;
 - final manuscript figure reproduction;

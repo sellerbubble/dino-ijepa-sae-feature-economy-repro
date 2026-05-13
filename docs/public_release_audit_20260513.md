@@ -46,7 +46,7 @@ The intended public v1 boundary is fixed in `docs/public_v1_scope.md`.
 | Standalone public CI | `.github/workflows/ci.yml` | Runs unit tests, release hygiene, `scripts/reproduce_smoke.sh`, and `scripts/build_tiny_artifact_bundle.sh` when `public_repro` is exported as a repository root. | Not executed by GitHub until the public repo/export is created. |
 | Runtime/config/model gates | `check-runtime`, `check-configs`, `check-models` | Command help inspected; smoke executes all three. | Real checkpoint existence is only enforced when users pass `--require-resolved-checkpoints`. |
 | Run matrix planning | `plan-runs`, `reproduction_run_plan.json`, `reproduction_run_plan.csv` | Unit-tested and smoke-tested; expands native, SAE, availability, Access, and Allocation rows from public configs. | This is a launch checklist, not an executor. |
-| Full profile launcher | `scripts/run_full_profile.sh` | Dry-run verified locally on 2026-05-13 for `dino_imagenet_l11`, `ijepa_imagenet_l31`, `dino_nyuv2_l11`, `ijepa_nyuv2_l31`, `dino_ade20k_l11`, `ijepa_ade20k_l31`, `dino_clevr_count_l11`, and `ijepa_clevr_count_l31`. It chains runtime/config/model/manifest gates, feature extraction, dense target export when needed, native and SAE probes, SAE-code extraction, Availability, Access, Allocation, artifact indexing, tables, and optional figures. ADE20K profiles remap official masks from `0` ignore/background plus `1..150` classes into `255` ignore plus `0..149` classes. CLEVR/Count profiles use image-only labels `label = object_count - 3` from scene annotations. | Real-slice remote validation has covered the matched ImageNet, NYUv2, and ADE20K vertical profiles. CLEVR/Count remote validation is the next open full-profile check. Additional layers, tasks, and SAE settings should extend this launcher or add sibling profiles under the same artifact contract. |
+| Full profile launcher | `scripts/run_full_profile.sh` | Dry-run verified locally on 2026-05-13 for `dino_imagenet_l11`, `ijepa_imagenet_l31`, `dino_nyuv2_l11`, `ijepa_nyuv2_l31`, `dino_ade20k_l11`, `ijepa_ade20k_l31`, `dino_clevr_count_l11`, and `ijepa_clevr_count_l31`. It chains runtime/config/model/manifest gates, feature extraction, dense target export when needed, native and SAE probes, SAE-code extraction, Availability, Access, Allocation, artifact indexing, tables, and optional figures. ADE20K profiles remap official masks from `0` ignore/background plus `1..150` classes into `255` ignore plus `0..149` classes. CLEVR/Count profiles use image-only labels `label = object_count - 3` from scene annotations. | Real-slice remote validation has covered both DINO and I-JEPA on all four paper task families: ImageNet, NYUv2, ADE20K, and CLEVR/Count. Additional layers, tasks, and SAE settings should extend this launcher or add sibling profiles under the same artifact contract. |
 | Artifact bundle completeness | `check-bundle`, `artifact_bundle_check.json` | Unit-tested; checks required files for every run-plan row and can fail with `--require-complete`. | Checks file presence, not scientific correctness of metrics. |
 | Dataset manifest gate | `check-manifest`, `ManifestDataset`, `inspect-images`, `export-targets` | Smoke validates a dense-depth manifest; docs describe ImageNet/CLEVR/NYUv2/ADE20K manifest rows. Dense profiles can export manifest-referenced depth/mask files into the public `targets.npz` contract. | Real public dataset download/preprocessing scripts are not included. |
 | Shared transform policy | `configs/models/*.yaml`, `models/transforms.py`, `inspect-images` | Implemented with PIL/NumPy resize, center crop, RGB conversion, ImageNet normalization. | Public exactness depends on users using the same configs for exported feature modules. |
@@ -62,38 +62,38 @@ The intended public v1 boundary is fixed in `docs/public_v1_scope.md`.
 | Artifact provenance | `index-artifacts`, `run_manifest.json`, schema validators, `current_git_commit()` | Smoke indexes each artifact family with `--require-valid`; array validation reports are valid index records; run manifests record the current git commit or `FEATURE_ECONOMY_GIT_COMMIT` override. | Falls back to `"unknown"` only when no git metadata or override is available. |
 | Tables | `make-tables`, `paper/tables.py` | Smoke exports probe, availability, subset usage, and ablation CSV tables. | Final manuscript formatting is separate from reproducibility CSV export. |
 | Figures | `make-figures`, `paper/figures.py` | Smoke exports overview figures when matplotlib is installed. | Final designed paper figures are not included. |
-| Full reproduction guide | `docs/full_reproduction.md` | Defines the default full paper-style rerun path, required inputs, outputs, resource expectations, and acceptance checks. | Paper-style runners still need to be ported and validated module by module. |
+| Full reproduction guide | `docs/full_reproduction.md` | Defines the default full paper-style rerun path, required inputs, outputs, resource expectations, acceptance checks, and all eight validated model/task profiles. | Future paper modules beyond the main AAA chain, such as native-space ablations and perturbation-response analyses, remain outside the default public v1 path. |
 | Quickstart path | `docs/release_quickstart.md` | Provides a 5-minute smoke path, a compact full vertical slice template, and an optional audit-bundle path. | Still points to the full runbook for multi-task/multi-model runs. |
 | Extension path | `docs/extending_models_tasks.md`, config directories, TorchScript export guide | Docs describe adding models, SAEs, tasks, and analyses through configs/adapters. | Needs more examples once a second real model/layer/task is added publicly. |
 
 ## Release Verdict
 
-Current status: **public alpha has executable command surfaces and smoke tests;
-the default target is now full paper-style rerun, while the first full public v1
-saved-array release candidate remains an optional audit artifact**.
+Current status: **public v1 candidate has executable smoke tests, optional
+saved-array audit support, and real-slice validation for all default full
+paper-style rerun profiles**.
 
 It is suitable for:
 
 - validating the public command surface;
 - demonstrating the paper evidence chain on fixtures and user-generated arrays;
-- allowing external users to generate or plug in DINO/I-JEPA features, SAE
-  codes, and probe outputs under documented contracts;
+- allowing external users to generate DINO/I-JEPA features from compatible
+  checkpoints or plug in features, SAE codes, and probe outputs under documented
+  contracts;
 - extending the project through configs and thin adapters.
 
 It is not yet suitable for claiming:
 
 - bit-identical reproduction of private paper-scale intermediate arrays;
-- official raw I-JEPA checkpoint loading;
+- universal raw I-JEPA checkpoint loading across arbitrary upstream checkpoint
+  formats;
 - equivalence to every private training-loop launcher;
 - final manuscript figure reproduction.
 
 ## Highest-Value Next Actions
 
-1. Export the standalone repository tree with `scripts/export_public_repo.sh`,
-   initialize a public GitHub repository from that tree, and let the standalone
-   CI run before publishing saved-array assets.
-2. Run `scripts/run_full_profile.sh dino_imagenet_l11` on a clean GPU machine
-   with real manifests, a DINO checkpoint, and an SAE checkpoint.
-3. Run clean real-slice validations for the CLEVR/Count full-profile entries.
-4. Revisit exact paper-scale probe training only if the escalation rule in
+1. Run longer full-data or larger-slice reproductions from the public repo when
+   compute time is available, and compare against `docs/expected_results.md`.
+2. Add public profiles for additional layers or SAE settings only through the
+   same config/launcher/artifact-contract pattern.
+3. Revisit exact paper-scale probe training only if the escalation rule in
    `docs/public_v1_scope.md` is satisfied.

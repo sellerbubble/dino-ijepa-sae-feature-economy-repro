@@ -184,8 +184,9 @@ python -m feature_economy.cli.main extract-features \
   --output-dir "$ARTIFACT_ROOT/features/dino_v2_base/imagenet_val_l11"
 ```
 
-For I-JEPA or another local model, export a TorchScript feature module first;
-see `docs/export_torchscript_backbones.md`.
+For I-JEPA or another local model, prefer `IJEPA_HF_NAME_OR_PATH` when your
+checkpoint is transformers-compatible. Otherwise export a TorchScript feature
+module first; see `docs/export_torchscript_backbones.md`.
 
 Validate features:
 

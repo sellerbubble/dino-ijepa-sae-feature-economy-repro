@@ -126,11 +126,14 @@ Current evidence:
 
 Remaining risk:
 
-- The repo still does not include an official raw I-JEPA checkpoint loader; the
-  current public path is to export I-JEPA as a TorchScript feature module first.
-- The HuggingFace backend has a tested contract boundary but still needs a
-  documented tiny real-checkpoint smoke run before being treated as a paper
-  reproduction path.
+- The repo still does not include a universal raw I-JEPA checkpoint loader for
+  every upstream checkpoint format. Use `IJEPA_HF_NAME_OR_PATH` for
+  transformers-compatible local checkpoints or export a TorchScript feature
+  module when needed.
+- The HuggingFace backend has passed real-slice validation for the default
+  DINO/I-JEPA public profiles, but users should still run `DRY_RUN=1` and
+  `check-runtime --profile experiments --require` on their own machines before
+  launching full-data jobs.
 
 ## Phase 3: SAE Code Extraction
 
