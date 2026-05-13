@@ -57,8 +57,8 @@ class ArtifactExportManifestTests(unittest.TestCase):
                 rows = list(csv.DictReader(handle))
             payload = json.loads(output_json.read_text(encoding="utf-8"))
             self.assertEqual(payload["record_type"], "artifact_export_manifest_template")
-            self.assertEqual(payload["num_rows"], 66)
-            self.assertEqual(len(rows), 66)
+            self.assertEqual(payload["num_rows"], 114)
+            self.assertEqual(len(rows), 114)
             self.assertEqual(rows[0]["export_status"], "TODO")
             self.assertIn("run_manifest.json", rows[0]["required_files"])
             self.assertTrue(
@@ -66,6 +66,7 @@ class ArtifactExportManifestTests(unittest.TestCase):
                     row["stage"] == "feature_ablation"
                     and row["task_id"] == "nyuv2_depth"
                     and row["model_id"] == "ijepa_vit_h14"
+                    and row["ranking_method"] == "hybrid"
                     for row in rows
                 )
             )

@@ -38,7 +38,7 @@ paper-used intermediate arrays can be inspected if needed.
 | Item | Status |
 | --- | --- |
 | Candidate root | `${PRIVATE_ARTIFACT_ROOT}/public_repro_feature_economy_v1_candidate` |
-| Run-plan completion | `66/66` rows complete |
+| Run-plan completion | `114` planned rows; earlier saved-array audit bundle covers the pre-ranking-control `66/66` slice |
 | Artifact index | `190/190` valid records |
 | Generated CSV tables | probe scores, availability, subset usage, and ablation summaries |
 | Metadata sanitizer | PASS, `0` remaining private-path hits |
@@ -81,19 +81,19 @@ Default users should regenerate these files with the commands in
 
 | Paper chain step | Current public status | Needed for real reproduction |
 | --- | --- | --- |
-| Native backbone probes | Fixture evaluation and lightweight linear probes implemented for classification/counting/depth/segmentation saved arrays. | Add paper-scale torch training settings if closed-form ridge is insufficient. |
-| SAE-code probes | Fixture evaluation and lightweight linear probes implemented for classification/counting/depth/segmentation saved arrays. | Add paper-scale torch training settings if closed-form ridge is insufficient. |
+| Native backbone probes | Fixture evaluation, lightweight linear probes, and public `paper-scale-torch` probes implemented for classification/counting/depth/segmentation saved arrays. | Use `paper-scale-torch` for full paper-style reruns; keep fixture/linear paths for smoke and diagnostics. |
+| SAE-code probes | Fixture evaluation, lightweight linear probes, and public `paper-scale-torch` probes implemented for classification/counting/depth/segmentation saved arrays. | Use `paper-scale-torch` for full paper-style reruns; dense outputs include compatibility proxies for ranking/ablation readers. |
 | Availability | Fired-count availability from saved `codes.npz` implemented. | Add usage-rate mode for dense spatial analyses if needed. |
 | Access | Probe-weight, validation-contribution, and hybrid ranking plus fired-count bucket-matched random subset usage from saved SAE codes implemented. | Add dense usage-rate mode if needed for per-pixel task-specific streams. |
-| Allocation | Linear-probe SAE feature zero-ablation with matched random control implemented for classification/counting/depth/segmentation saved arrays. | Add paper-scale task-specific settings. |
+| Allocation | SAE feature zero-ablation with matched random control implemented for classification/counting/depth/segmentation saved arrays, now run across `probe_weight`, `validation_contribution`, and `hybrid` ranking controls in full profiles. | Module F native-space ablation remains a later advanced module. |
 | Paper tables | Probe, availability, access/subset, and allocation CSV tables from indexed artifacts. | Add final paper formatting once real artifacts exist. |
 | Paper figures | Lightweight overview figures from public CSV tables implemented. | Add final designed paper figure scripts if exact manuscript visuals are required. |
 | Task metrics | Implemented and unit-tested for classification, depth, segmentation, and counting-style accuracy. | Add paper-specific metric variants only if needed. |
 | Dataset manifest adapter | Metadata records, manifest-relative path resolution, image inspection, and explicit dense `targets.npz` probe input implemented. | Add optional target-file loaders if public datasets should be read directly from raw masks/maps. |
 | Transform policy | Config-backed shared ImageNet resize/crop/normalize implemented with PIL/NumPy. | Reuse the same policy in torch-backed real runners. |
 | Fixture native evaluation | Implemented for manifests with precomputed predictions. | Keep for smoke/CI; use linear probe backend for saved feature arrays. |
-| Native linear probe | Closed-form ridge probe over saved `features.npz` implemented for classification/counting/depth/segmentation. | Add torch training loop if paper-scale ridge is not representative enough. |
-| SAE linear probe | Closed-form ridge probe over saved `codes.npz` implemented for classification/counting/depth/segmentation. | Add torch training loop if paper-scale ridge is not representative enough. |
+| Native probe backends | Closed-form ridge and `paper-scale-torch` probes over saved `features.npz` implemented for classification/counting/depth/segmentation. | Default to `paper-scale-torch` for paper-style reruns. |
+| SAE probe backends | Closed-form ridge and `paper-scale-torch` probes over saved `codes.npz` implemented for classification/counting/depth/segmentation. | Default to `paper-scale-torch` for paper-style reruns. |
 | Feature extraction | Fixture extraction, HuggingFace DINO-style extraction, and TorchScript local/I-JEPA feature-module extraction implemented with the same `.npz`/summary contract. | Add an official raw I-JEPA checkpoint loader only if exact raw-checkpoint reproduction becomes required. |
 | SAE-code extraction | Fixture conversion, lightweight linear-TopK SAE encoding, and standard SAE checkpoint converter implemented. | Add dedicated gated SAE backend if needed. |
 

@@ -261,9 +261,11 @@ Test whether Allocation conclusions depend on the default hybrid top-k ranking.
 
 Deliverables:
 
-- `configs/sweeps/ranking_control_paper.yaml`.
-- Runner for `probe_weight`, `validation_contribution`, and `hybrid` top-k
-  selections.
+- `configs/sweeps/ranking_control.yaml`.
+- `scripts/run_full_profile.sh` runs `probe_weight`, `validation_contribution`,
+  and `hybrid` top-k selections by default through `RANKING_METHODS`.
+- Each ranking method writes ranking, subset-usage, and ablation artifacts under
+  `analysis/ranking_controls/{sae_id}/{task_slug}/{method}/`.
 - Summary tables comparing selected high-usage core results across ranking
   methods.
 

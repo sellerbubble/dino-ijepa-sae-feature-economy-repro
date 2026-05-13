@@ -41,7 +41,7 @@ PYTHONPATH=src python -m feature_economy.cli.main plan-runs \
   --output-csv /tmp/feature_economy_release_plan/reproduction_run_plan.csv
 ```
 
-The current public v1 configs expand to `66` planned rows:
+The current public v1 configs expand to `114` planned rows:
 
 | Stage | Expected rows |
 | --- | ---: |
@@ -50,10 +50,10 @@ The current public v1 configs expand to `66` planned rows:
 | `sae_code_extraction` | 8 |
 | `native_probe` | 8 |
 | `sae_probe` | 8 |
-| `feature_ranking` | 8 |
+| `feature_ranking` | 24 |
 | `contribution_scores` | 8 |
-| `subset_usage` | 8 |
-| `feature_ablation` | 8 |
+| `subset_usage` | 24 |
+| `feature_ablation` | 24 |
 
 The generated `reproduction_run_plan.json` is the source of truth. If configs
 change, regenerate the plan rather than editing row counts by hand.
@@ -90,19 +90,19 @@ Supported staging profiles are:
 
 | Profile | Rows | Purpose |
 | --- | ---: | --- |
-| `dino_imagenet_v1_trial` | 9 | Single-model DINO/ImageNet vertical slice. |
-| `ijepa_imagenet_v1_trial` | 9 | Single-model I-JEPA/ImageNet vertical slice. |
-| `imagenet_v1_trial` | 18 | Combined DINO/I-JEPA ImageNet slice. |
-| `nyuv2_v1_trial` | 16 | Combined DINO/I-JEPA NYUv2 depth slice. |
-| `dino_nyuv2_v1_trial` | 8 | Single-model DINO/NYUv2 dense-depth slice. |
-| `ijepa_nyuv2_v1_trial` | 8 | Single-model I-JEPA/NYUv2 dense-depth slice. |
-| `ade20k_v1_trial` | 16 | Combined DINO/I-JEPA ADE20K segmentation slice. |
-| `dino_ade20k_v1_trial` | 8 | Single-model DINO/ADE20K dense-segmentation slice. |
-| `ijepa_ade20k_v1_trial` | 8 | Single-model I-JEPA/ADE20K dense-segmentation slice. |
-| `clevr_count_v1_trial` | 16 | Combined DINO/I-JEPA CLEVR/Count slice. |
-| `dino_clevr_count_v1_trial` | 8 | Single-model DINO/CLEVR/Count slice. |
-| `ijepa_clevr_count_v1_trial` | 8 | Single-model I-JEPA/CLEVR/Count slice. |
-| `full_v1_template` | 66 | Full public v1 saved-array release template. |
+| `dino_imagenet_v1_trial` | 15 | Single-model DINO/ImageNet vertical slice. |
+| `ijepa_imagenet_v1_trial` | 15 | Single-model I-JEPA/ImageNet vertical slice. |
+| `imagenet_v1_trial` | 30 | Combined DINO/I-JEPA ImageNet slice. |
+| `nyuv2_v1_trial` | 28 | Combined DINO/I-JEPA NYUv2 depth slice. |
+| `dino_nyuv2_v1_trial` | 14 | Single-model DINO/NYUv2 dense-depth slice. |
+| `ijepa_nyuv2_v1_trial` | 14 | Single-model I-JEPA/NYUv2 dense-depth slice. |
+| `ade20k_v1_trial` | 28 | Combined DINO/I-JEPA ADE20K segmentation slice. |
+| `dino_ade20k_v1_trial` | 14 | Single-model DINO/ADE20K dense-segmentation slice. |
+| `ijepa_ade20k_v1_trial` | 14 | Single-model I-JEPA/ADE20K dense-segmentation slice. |
+| `clevr_count_v1_trial` | 28 | Combined DINO/I-JEPA CLEVR/Count slice. |
+| `dino_clevr_count_v1_trial` | 14 | Single-model DINO/CLEVR/Count slice. |
+| `ijepa_clevr_count_v1_trial` | 14 | Single-model I-JEPA/CLEVR/Count slice. |
+| `full_v1_template` | 114 | Full public v1 saved-array release template. |
 
 The generated manifest is still a handoff sheet, not proof that the artifact
 slice is ready. Fill `source_artifact_dir` only after inspecting private or
@@ -166,7 +166,7 @@ bash scripts/stage_artifact_bundle_from_manifest.sh \
 This wrapper runs audit, copy, `check-bundle --require-complete`,
 `index-artifacts --require-valid`, `make-tables`, and
 `package_artifact_bundle.sh` in order. Use a subset run plan if you are staging
-a partial release; the full public v1 run plan expects all `66` rows.
+a partial release; the full public v1 run plan expects all `114` rows.
 
 ## Required Artifact Root Layout
 
@@ -358,7 +358,7 @@ run matrix:
 
 | Gate | Result |
 | --- | --- |
-| Run-plan rows | `66/66` complete |
+| Run-plan rows | `66/66` complete for the pre-ranking-control candidate |
 | Artifact index | `190/190` valid records |
 | Generated tables | `probe_scores.csv`, `availability_summary.csv`, `subset_usage_summary.csv`, `ablation_summary.csv` |
 | Candidate root size | approximately 7.4 GiB |

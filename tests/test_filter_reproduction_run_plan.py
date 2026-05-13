@@ -62,7 +62,7 @@ class FilterReproductionRunPlanTests(unittest.TestCase):
 
             payload = json.loads(subset_plan.read_text(encoding="utf-8"))
             self.assertEqual(payload["record_type"], "reproduction_run_plan")
-            self.assertEqual(payload["num_rows"], 9)
+            self.assertEqual(payload["num_rows"], 15)
             self.assertEqual(
                 set(payload["stages"]),
                 {
@@ -76,6 +76,15 @@ class FilterReproductionRunPlanTests(unittest.TestCase):
                     "sae_probe",
                     "subset_usage",
                 },
+            )
+            ranking_rows = [
+                row
+                for row in payload["rows"]
+                if row["stage"] in {"feature_ranking", "subset_usage", "feature_ablation"}
+            ]
+            self.assertEqual(
+                {row["ranking_method"] for row in ranking_rows},
+                {"probe_weight", "validation_contribution", "hybrid"},
             )
             self.assertTrue(all(row["model_id"] == "dino_v2_base" for row in payload["rows"]))
 

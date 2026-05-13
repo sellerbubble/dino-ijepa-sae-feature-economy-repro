@@ -59,18 +59,20 @@ codes/{sae_id}/{task_id}/val/
 probes/native/{model_id}/{task_id}/val/
 probes/sae/{sae_id}/{task_id}/val/
 analysis/availability/{sae_id}/{dataset_id}_{split}/
-analysis/ranking/{sae_id}/{task_id}/val/
 analysis/contribution/{sae_id}/{task_id}/val/
-analysis/subset_usage/{sae_id}/{task_id}/val/
-analysis/ablation/{sae_id}/{task_id}/val/
+analysis/ranking_controls/{sae_id}/{task_slug}/{method}/ranking/
+analysis/ranking_controls/{sae_id}/{task_slug}/{method}/subset_usage/
+analysis/ranking_controls/{sae_id}/{task_slug}/{method}/ablation/
 ```
 
 For layer sweeps, include the layer in `sae_id` and use one directory per SAE.
-For alternative rankings, add a suffix that preserves the original ranking:
+For alternative rankings, use the method directory to preserve the original
+ranking rule:
 
 ```text
-analysis/ranking_hybrid/{sae_id}/{task_id}/val/
-analysis/ranking_validation_contribution/{sae_id}/{task_id}/val/
+analysis/ranking_controls/{sae_id}/{task_slug}/probe_weight/
+analysis/ranking_controls/{sae_id}/{task_slug}/validation_contribution/
+analysis/ranking_controls/{sae_id}/{task_slug}/hybrid/
 ```
 
 ## Required Files By Stage

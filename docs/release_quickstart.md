@@ -267,8 +267,8 @@ python -m feature_economy.cli.main rank-features \
   --output-dir "$ARTIFACT_ROOT/analysis/ranking/dino_l11_topk32_exp4/imagenet_val"
 
 # Optional Module E-style ranking sensitivity control: provide a saved
-# contribution-score vector from single-feature validation ablations, then
-# rerun the same ranking step with an alternative ranking rule.
+# contribution-score vector, then run probe_weight, validation_contribution,
+# and hybrid rankings through the same Access/Allocation steps.
 python -m feature_economy.cli.main compute-contributions \
   --config-root configs \
   --codes-npz "$ARTIFACT_ROOT/codes/dino_l11_topk32_exp4/imagenet_val/codes.npz" \
@@ -279,37 +279,50 @@ python -m feature_economy.cli.main compute-contributions \
   --sae-id dino_l11_topk32_exp4 \
   --output-dir "$ARTIFACT_ROOT/analysis/contribution/dino_l11_topk32_exp4/imagenet_val"
 
-python -m feature_economy.cli.main rank-features \
-  --config-root configs \
-  --codes-npz "$ARTIFACT_ROOT/codes/dino_l11_topk32_exp4/imagenet_val/codes.npz" \
-  --probe-logits-npz "$ARTIFACT_ROOT/probes/sae/dino_l11_topk32_exp4/imagenet_val/probe_logits.npz" \
-  --contribution-npz "$ARTIFACT_ROOT/analysis/contribution/dino_l11_topk32_exp4/imagenet_val/contribution_scores.npz" \
-  --ranking-method hybrid \
-  --hybrid-alpha 0.5 \
-  --task-id imagenet_1k \
-  --model-id dino_v2_base \
-  --sae-id dino_l11_topk32_exp4 \
-  --top-k 100 \
-  --output-dir "$ARTIFACT_ROOT/analysis/ranking_hybrid/dino_l11_topk32_exp4/imagenet_val"
+for method in probe_weight validation_contribution hybrid; do
+  ranking_dir="$ARTIFACT_ROOT/analysis/ranking_controls/dino_l11_topk32_exp4/imagenet_val/$method/ranking"
+  subset_dir="$ARTIFACT_ROOT/analysis/ranking_controls/dino_l11_topk32_exp4/imagenet_val/$method/subset_usage"
+  ablation_dir="$ARTIFACT_ROOT/analysis/ranking_controls/dino_l11_topk32_exp4/imagenet_val/$method/ablation"
+  mkdir -p "$ranking_dir" "$subset_dir" "$ablation_dir"
 
-python -m feature_economy.cli.main compute-subset-usage \
-  --config-root configs \
-  --codes-npz "$ARTIFACT_ROOT/codes/dino_l11_topk32_exp4/imagenet_val/codes.npz" \
-  --ranking-json "$ARTIFACT_ROOT/analysis/ranking/dino_l11_topk32_exp4/imagenet_val/task_feature_ranking.json" \
-  --top-k 100 \
-  --random-seed 0 \
-  --output-dir "$ARTIFACT_ROOT/analysis/subset_usage/dino_l11_topk32_exp4/imagenet_val"
+  ranking_args=(--ranking-method "$method")
+  if [ "$method" = "validation_contribution" ] || [ "$method" = "hybrid" ]; then
+    ranking_args+=(--contribution-npz "$ARTIFACT_ROOT/analysis/contribution/dino_l11_topk32_exp4/imagenet_val/contribution_scores.npz")
+  fi
+  if [ "$method" = "hybrid" ]; then
+    ranking_args+=(--hybrid-alpha 0.5)
+  fi
 
-python -m feature_economy.cli.main ablate-features \
-  --config-root configs \
-  --backend linear-probe \
-  --codes-npz "$ARTIFACT_ROOT/codes/dino_l11_topk32_exp4/imagenet_val/codes.npz" \
-  --probe-logits-npz "$ARTIFACT_ROOT/probes/sae/dino_l11_topk32_exp4/imagenet_val/probe_logits.npz" \
-  --ranking-json "$ARTIFACT_ROOT/analysis/ranking/dino_l11_topk32_exp4/imagenet_val/task_feature_ranking.json" \
-  --task-type classification \
-  --top-k 100 \
-  --random-seed 0 \
-  --output-dir "$ARTIFACT_ROOT/analysis/ablation/dino_l11_topk32_exp4/imagenet_val"
+  python -m feature_economy.cli.main rank-features \
+    --config-root configs \
+    --codes-npz "$ARTIFACT_ROOT/codes/dino_l11_topk32_exp4/imagenet_val/codes.npz" \
+    --probe-logits-npz "$ARTIFACT_ROOT/probes/sae/dino_l11_topk32_exp4/imagenet_val/probe_logits.npz" \
+    --task-id imagenet_1k \
+    --model-id dino_v2_base \
+    --sae-id dino_l11_topk32_exp4 \
+    --top-k 100 \
+    "${ranking_args[@]}" \
+    --output-dir "$ranking_dir"
+
+  python -m feature_economy.cli.main compute-subset-usage \
+    --config-root configs \
+    --codes-npz "$ARTIFACT_ROOT/codes/dino_l11_topk32_exp4/imagenet_val/codes.npz" \
+    --ranking-json "$ranking_dir/task_feature_ranking.json" \
+    --top-k 100 \
+    --random-seed 0 \
+    --output-dir "$subset_dir"
+
+  python -m feature_economy.cli.main ablate-features \
+    --config-root configs \
+    --backend linear-probe \
+    --codes-npz "$ARTIFACT_ROOT/codes/dino_l11_topk32_exp4/imagenet_val/codes.npz" \
+    --probe-logits-npz "$ARTIFACT_ROOT/probes/sae/dino_l11_topk32_exp4/imagenet_val/probe_logits.npz" \
+    --ranking-json "$ranking_dir/task_feature_ranking.json" \
+    --task-type classification \
+    --top-k 100 \
+    --random-seed 0 \
+    --output-dir "$ablation_dir"
+done
 ```
 
 Index artifacts and export tables/figures:
@@ -378,14 +391,15 @@ python -m feature_economy.cli.main make-tables \
 
 Expected current audit-bundle status:
 
-- `66/66` run-plan rows complete;
+- `66/66` pre-ranking-control run-plan rows complete in the existing audit bundle;
+- regenerate the run plan for the current `114`-row ranking-control-expanded layout;
 - `190/190` indexed artifacts valid;
 - generated tables for probe scores, Availability, Access, and Allocation.
 
 ## 5. What This Does Not Claim
 
 This quickstart does not redistribute datasets, model weights, SAE checkpoints,
-or private paper-scale training loops. It provides a public path for rerunning
-the feature extraction, SAE-code extraction, probe, and AAA analysis chain under
-documented configs. See `docs/public_release_audit_20260513.md` for the current
-release boundary.
+or private cluster artifacts. It provides a public path for rerunning feature
+extraction, SAE-code extraction, paper-scale probe training, and the AAA
+analysis chain under documented configs. See
+`docs/public_release_audit_20260513.md` for the current release boundary.

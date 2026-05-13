@@ -1,0 +1,16 @@
+id: ranking_control
+mode: ranking_control
+methods:
+  - probe_weight
+  - validation_contribution
+  - hybrid
+hybrid_alpha: 0.5
+outputs:
+  root: ${ARTIFACT_ROOT}/analysis/ranking_controls/{sae_id}/{task_slug}
+  ranking: "{method}/ranking/task_feature_ranking.json"
+  subset_usage: "{method}/subset_usage/subset_usage_summary.json"
+  ablation: "{method}/ablation/feature_ablation_summary.json"
+notes:
+  - This sweep is the public Module E alternative-ranking control.
+  - Full profiles default to these three methods through RANKING_METHODS.
+  - The hybrid score combines normalized probe-weight and validation-contribution scores.

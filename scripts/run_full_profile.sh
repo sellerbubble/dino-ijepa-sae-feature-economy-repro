@@ -32,6 +32,8 @@ CONTRIBUTION_SCORING_METHOD="${CONTRIBUTION_SCORING_METHOD:-auto}"
 IJEPA_TORCHSCRIPT_CHECKPOINT="${IJEPA_TORCHSCRIPT_CHECKPOINT:-}"
 TORCHSCRIPT_OUTPUT_KEY="${TORCHSCRIPT_OUTPUT_KEY:-}"
 TORCHSCRIPT_OUTPUT_INDEX="${TORCHSCRIPT_OUTPUT_INDEX:-0}"
+RANKING_METHODS="${RANKING_METHODS:-probe_weight validation_contribution hybrid}"
+HYBRID_ALPHA="${HYBRID_ALPHA:-0.5}"
 
 usage() {
   cat <<'EOF'
@@ -71,6 +73,11 @@ Environment:
                          true_class_logit_drop for ImageNet/CLEVR-style
                          classification and weight_activation for dense tasks.
                          Use exact_metric_drop for small exact audit runs.
+  RANKING_METHODS="probe_weight validation_contribution hybrid"
+                         Alternative ranking-control sweep. Each method writes
+                         ranking, subset-usage, and ablation artifacts under
+                         analysis/ranking_controls/.
+  HYBRID_ALPHA=0.5       Probe-weight mixture weight for hybrid ranking.
   MAKE_FIGURES=0        Skip overview figure export.
 
 Supported profiles:
@@ -217,11 +224,8 @@ VAL_TARGET_DIR="$ARTIFACT_ROOT/targets/$TASK_ID/$VAL_SPLIT"
 NATIVE_PROBE_DIR="$ARTIFACT_ROOT/probes/native/$MODEL_ID/$TASK_SLUG"
 SAE_PROBE_DIR="$ARTIFACT_ROOT/probes/sae/$SAE_ID/$TASK_SLUG"
 AVAILABILITY_DIR="$ARTIFACT_ROOT/analysis/availability/$SAE_ID/$TASK_SLUG"
-RANKING_DIR="$ARTIFACT_ROOT/analysis/ranking/$SAE_ID/$TASK_SLUG"
 CONTRIBUTION_DIR="$ARTIFACT_ROOT/analysis/contribution/$SAE_ID/$TASK_SLUG"
-RANKING_HYBRID_DIR="$ARTIFACT_ROOT/analysis/ranking_hybrid/$SAE_ID/$TASK_SLUG"
-SUBSET_USAGE_DIR="$ARTIFACT_ROOT/analysis/subset_usage/$SAE_ID/$TASK_SLUG"
-ABLATION_DIR="$ARTIFACT_ROOT/analysis/ablation/$SAE_ID/$TASK_SLUG"
+RANKING_CONTROL_ROOT="$ARTIFACT_ROOT/analysis/ranking_controls/$SAE_ID/$TASK_SLUG"
 INDEX_DIR="$ARTIFACT_ROOT/index/analysis"
 TABLE_DIR="$ARTIFACT_ROOT/tables/analysis"
 FIGURE_DIR="$ARTIFACT_ROOT/figures/analysis"
@@ -276,11 +280,8 @@ run mkdir -p \
   "$NATIVE_PROBE_DIR" \
   "$SAE_PROBE_DIR" \
   "$AVAILABILITY_DIR" \
-  "$RANKING_DIR" \
   "$CONTRIBUTION_DIR" \
-  "$RANKING_HYBRID_DIR" \
-  "$SUBSET_USAGE_DIR" \
-  "$ABLATION_DIR" \
+  "$RANKING_CONTROL_ROOT" \
   "$INDEX_DIR" \
   "$TABLE_DIR" \
   "$FIGURE_DIR" \
@@ -572,16 +573,6 @@ run python -m feature_economy.cli.main compute-usage \
   --split "$SPLIT" \
   --output-dir "$AVAILABILITY_DIR"
 
-run python -m feature_economy.cli.main rank-features \
-  --config-root "$CONFIG_ROOT" \
-  --codes-npz "$CODES_DIR/codes.npz" \
-  --probe-logits-npz "$SAE_PROBE_DIR/probe_logits.npz" \
-  --task-id "$TASK_ID" \
-  --model-id "$MODEL_ID" \
-  --sae-id "$SAE_ID" \
-  --top-k 100 \
-  --output-dir "$RANKING_DIR"
-
 run python -m feature_economy.cli.main compute-contributions \
   --config-root "$CONFIG_ROOT" \
   --codes-npz "$CODES_DIR/codes.npz" \
@@ -593,37 +584,57 @@ run python -m feature_economy.cli.main compute-contributions \
   --scoring-method "$CONTRIBUTION_SCORING_METHOD" \
   --output-dir "$CONTRIBUTION_DIR"
 
-run python -m feature_economy.cli.main rank-features \
-  --config-root "$CONFIG_ROOT" \
-  --codes-npz "$CODES_DIR/codes.npz" \
-  --probe-logits-npz "$SAE_PROBE_DIR/probe_logits.npz" \
-  --contribution-npz "$CONTRIBUTION_DIR/contribution_scores.npz" \
-  --ranking-method hybrid \
-  --hybrid-alpha 0.5 \
-  --task-id "$TASK_ID" \
-  --model-id "$MODEL_ID" \
-  --sae-id "$SAE_ID" \
-  --top-k 100 \
-  --output-dir "$RANKING_HYBRID_DIR"
+for ranking_method in $RANKING_METHODS; do
+  if [[ "$ranking_method" != "probe_weight" \
+    && "$ranking_method" != "validation_contribution" \
+    && "$ranking_method" != "hybrid" ]]; then
+    echo "Unsupported ranking method in RANKING_METHODS: $ranking_method" >&2
+    exit 2
+  fi
+  ranking_dir="$RANKING_CONTROL_ROOT/$ranking_method/ranking"
+  subset_usage_dir="$RANKING_CONTROL_ROOT/$ranking_method/subset_usage"
+  ablation_dir="$RANKING_CONTROL_ROOT/$ranking_method/ablation"
+  run mkdir -p "$ranking_dir" "$subset_usage_dir" "$ablation_dir"
 
-run python -m feature_economy.cli.main compute-subset-usage \
-  --config-root "$CONFIG_ROOT" \
-  --codes-npz "$CODES_DIR/codes.npz" \
-  --ranking-json "$RANKING_HYBRID_DIR/task_feature_ranking.json" \
-  --top-k 100 \
-  --random-seed 0 \
-  --output-dir "$SUBSET_USAGE_DIR"
+  ranking_args=(
+    --config-root "$CONFIG_ROOT"
+    --codes-npz "$CODES_DIR/codes.npz"
+    --probe-logits-npz "$SAE_PROBE_DIR/probe_logits.npz"
+    --task-id "$TASK_ID"
+    --model-id "$MODEL_ID"
+    --sae-id "$SAE_ID"
+    --top-k 100
+    --ranking-method "$ranking_method"
+  )
+  if [[ "$ranking_method" == "validation_contribution" || "$ranking_method" == "hybrid" ]]; then
+    ranking_args+=(--contribution-npz "$CONTRIBUTION_DIR/contribution_scores.npz")
+  fi
+  if [[ "$ranking_method" == "hybrid" ]]; then
+    ranking_args+=(--hybrid-alpha "$HYBRID_ALPHA")
+  fi
+  run python -m feature_economy.cli.main rank-features \
+    "${ranking_args[@]}" \
+    --output-dir "$ranking_dir"
 
-run python -m feature_economy.cli.main ablate-features \
-  --config-root "$CONFIG_ROOT" \
-  --backend linear-probe \
-  --codes-npz "$CODES_DIR/codes.npz" \
-  --probe-logits-npz "$SAE_PROBE_DIR/probe_logits.npz" \
-  --ranking-json "$RANKING_HYBRID_DIR/task_feature_ranking.json" \
-  --task-type "$TASK_TYPE" \
-  --top-k 100 \
-  --random-seed 0 \
-  --output-dir "$ABLATION_DIR"
+  run python -m feature_economy.cli.main compute-subset-usage \
+    --config-root "$CONFIG_ROOT" \
+    --codes-npz "$CODES_DIR/codes.npz" \
+    --ranking-json "$ranking_dir/task_feature_ranking.json" \
+    --top-k 100 \
+    --random-seed 0 \
+    --output-dir "$subset_usage_dir"
+
+  run python -m feature_economy.cli.main ablate-features \
+    --config-root "$CONFIG_ROOT" \
+    --backend linear-probe \
+    --codes-npz "$CODES_DIR/codes.npz" \
+    --probe-logits-npz "$SAE_PROBE_DIR/probe_logits.npz" \
+    --ranking-json "$ranking_dir/task_feature_ranking.json" \
+    --task-type "$TASK_TYPE" \
+    --top-k 100 \
+    --random-seed 0 \
+    --output-dir "$ablation_dir"
+done
 
 run python -m feature_economy.cli.main index-artifacts \
   --input-dir "$ARTIFACT_ROOT" \
@@ -653,6 +664,8 @@ contribution_scoring_method=$CONTRIBUTION_SCORING_METHOD
 probe_backend=$PROBE_BACKEND
 probe_epochs=$PROBE_EPOCHS
 probe_batch_size=$PROBE_BATCH_SIZE
+ranking_methods=$RANKING_METHODS
+hybrid_alpha=$HYBRID_ALPHA
 num_classes=$NUM_CLASSES
 ignore_index=$IGNORE_INDEX
 segmentation_ignore_value=$SEGMENTATION_IGNORE_VALUE

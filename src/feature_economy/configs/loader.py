@@ -56,6 +56,7 @@ def validate_all_configs(config_root: str | Path) -> list[Path]:
         "tasks": validate_task_config,
         "probes": validate_probe_config,
         "experiments": validate_experiment_config,
+        "sweeps": validate_sweep_config,
     }
     validated: list[Path] = []
     for path in sorted(config_root.rglob("*.yaml")):
@@ -228,6 +229,26 @@ def validate_experiment_config(record: Mapping[str, Any]) -> None:
         if not isinstance(record.get("subsets"), list) or not record["subsets"]:
             raise ConfigError("experiment_config.subsets must be a non-empty list")
     _reject_private_paths(record, "experiment_config")
+
+
+def validate_sweep_config(record: Mapping[str, Any]) -> None:
+    _require_keys(record, ["id", "mode", "methods", "outputs"], "sweep_config")
+    _require_identifier(record["id"], "sweep_config.id")
+    if record["mode"] != "ranking_control":
+        raise ConfigError(f"unsupported sweep_config.mode: {record['mode']!r}")
+    methods = record["methods"]
+    if not isinstance(methods, list) or not methods:
+        raise ConfigError("sweep_config.methods must be a non-empty list")
+    for method in methods:
+        if method not in {"probe_weight", "validation_contribution", "hybrid"}:
+            raise ConfigError(f"unsupported sweep_config.methods entry: {method!r}")
+    outputs = _require_mapping(record["outputs"], "sweep_config.outputs")
+    _require_keys(outputs, ["root", "ranking", "subset_usage", "ablation"], "sweep_config.outputs")
+    if "hybrid_alpha" in record:
+        _require_type(record["hybrid_alpha"], (int, float), "sweep_config.hybrid_alpha")
+        if not 0.0 <= float(record["hybrid_alpha"]) <= 1.0:
+            raise ConfigError("sweep_config.hybrid_alpha must be in [0, 1]")
+    _reject_private_paths(record, "sweep_config")
 
 
 def _require_keys(record: Mapping[str, Any], keys: Sequence[str], name: str) -> None:

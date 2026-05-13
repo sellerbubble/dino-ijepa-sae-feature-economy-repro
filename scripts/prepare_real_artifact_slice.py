@@ -32,6 +32,7 @@ CSV_COLUMNS = [
     "task_type",
     "model_id",
     "sae_id",
+    "ranking_method",
     "command",
     "artifact_dir",
 ]
@@ -45,6 +46,7 @@ MANIFEST_COLUMNS = [
     "task_type",
     "model_id",
     "sae_id",
+    "ranking_method",
     "command",
     "public_artifact_dir",
     "required_files",
@@ -221,7 +223,7 @@ PROFILE_FILTERS = {
         sae_ids={"", "ijepa_l31_topk32_exp4"},
     ),
     "full_v1_template": {
-        "description": "Full public v1 66-row saved-array release template.",
+        "description": "Full public v1 114-row saved-array release template.",
         "model_ids": set(),
         "task_ids": set(),
         "sae_ids": set(),
@@ -335,6 +337,7 @@ def _build_manifest(
                 "task_type": row.get("task_type", ""),
                 "model_id": row.get("model_id", ""),
                 "sae_id": row.get("sae_id", ""),
+                "ranking_method": row.get("ranking_method", ""),
                 "command": row.get("command", ""),
                 "public_artifact_dir": row.get("artifact_dir", ""),
                 "required_files": REQUIRED_FILES_BY_STAGE.get(stage, []),

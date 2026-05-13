@@ -40,9 +40,9 @@ class PrepareRealArtifactSliceTests(unittest.TestCase):
             with (output_dir / "artifact_export_manifest.csv").open(newline="") as handle:
                 rows = list(csv.DictReader(handle))
 
-            self.assertEqual(run_plan["num_rows"], 9)
-            self.assertEqual(manifest["num_rows"], 9)
-            self.assertEqual(len(rows), 9)
+            self.assertEqual(run_plan["num_rows"], 15)
+            self.assertEqual(manifest["num_rows"], 15)
+            self.assertEqual(len(rows), 15)
             self.assertTrue((output_dir / "full_reproduction_run_plan.json").exists())
             self.assertTrue((output_dir / "README.md").exists())
             self.assertTrue(all(row["model_id"] == "dino_v2_base" for row in rows))
@@ -55,6 +55,8 @@ class PrepareRealArtifactSliceTests(unittest.TestCase):
             self.assertEqual(statuses["contribution_scores"], "TODO")
             self.assertEqual(statuses["sae_probe"], "NEEDS_CONVERSION")
             self.assertEqual(statuses["feature_ablation"], "NEEDS_CONVERSION")
+            ranking_methods = {row["ranking_method"] for row in rows if row["stage"] == "feature_ranking"}
+            self.assertEqual(ranking_methods, {"probe_weight", "validation_contribution", "hybrid"})
             self.assertIn("stage_artifact_bundle_from_manifest.sh", (output_dir / "README.md").read_text())
 
     def test_prepare_ijepa_imagenet_trial_workspace(self):
@@ -83,8 +85,8 @@ class PrepareRealArtifactSliceTests(unittest.TestCase):
             with (output_dir / "artifact_export_manifest.csv").open(newline="") as handle:
                 rows = list(csv.DictReader(handle))
 
-            self.assertEqual(run_plan["num_rows"], 9)
-            self.assertEqual(len(rows), 9)
+            self.assertEqual(run_plan["num_rows"], 15)
+            self.assertEqual(len(rows), 15)
             self.assertTrue(all(row["model_id"] == "ijepa_vit_h14" for row in rows))
             self.assertIn("ijepa_l31_topk32_exp4", {row["sae_id"] for row in rows})
             statuses = {row["stage"]: row["export_status"] for row in rows}
@@ -94,16 +96,16 @@ class PrepareRealArtifactSliceTests(unittest.TestCase):
 
     def test_prepare_task_level_trial_profiles(self):
         expected = {
-            "imagenet_v1_trial": (18, {"imagenet_1k", "imagenet_1k_val"}),
-            "nyuv2_v1_trial": (16, {"nyuv2_depth"}),
-            "dino_nyuv2_v1_trial": (8, {"nyuv2_depth"}),
-            "ijepa_nyuv2_v1_trial": (8, {"nyuv2_depth"}),
-            "ade20k_v1_trial": (16, {"ade20k_segmentation"}),
-            "dino_ade20k_v1_trial": (8, {"ade20k_segmentation"}),
-            "ijepa_ade20k_v1_trial": (8, {"ade20k_segmentation"}),
-            "clevr_count_v1_trial": (16, {"clevr_count"}),
-            "dino_clevr_count_v1_trial": (8, {"clevr_count"}),
-            "ijepa_clevr_count_v1_trial": (8, {"clevr_count"}),
+            "imagenet_v1_trial": (30, {"imagenet_1k", "imagenet_1k_val"}),
+            "nyuv2_v1_trial": (28, {"nyuv2_depth"}),
+            "dino_nyuv2_v1_trial": (14, {"nyuv2_depth"}),
+            "ijepa_nyuv2_v1_trial": (14, {"nyuv2_depth"}),
+            "ade20k_v1_trial": (28, {"ade20k_segmentation"}),
+            "dino_ade20k_v1_trial": (14, {"ade20k_segmentation"}),
+            "ijepa_ade20k_v1_trial": (14, {"ade20k_segmentation"}),
+            "clevr_count_v1_trial": (28, {"clevr_count"}),
+            "dino_clevr_count_v1_trial": (14, {"clevr_count"}),
+            "ijepa_clevr_count_v1_trial": (14, {"clevr_count"}),
         }
         for profile, (expected_rows, expected_tasks) in expected.items():
             with self.subTest(profile=profile):

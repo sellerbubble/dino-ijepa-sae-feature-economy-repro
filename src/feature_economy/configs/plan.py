@@ -17,6 +17,7 @@ PLAN_COLUMNS = [
     "task_type",
     "model_id",
     "sae_id",
+    "ranking_method",
     "command",
     "artifact_dir",
 ]
@@ -31,6 +32,11 @@ def build_reproduction_plan(config_root: str | Path) -> dict[str, Any]:
     saes = _load_family(config_root, "saes")
     tasks = _load_family(config_root, "tasks")
     experiments = _load_family(config_root, "experiments")
+    sweeps = _load_family(config_root, "sweeps")
+    ranking_methods = sweeps.get("ranking_control", {}).get(
+        "methods",
+        ["probe_weight", "validation_contribution", "hybrid"],
+    )
 
     rows: list[dict[str, str]] = []
     for experiment_id, experiment in sorted(experiments.items()):
@@ -64,9 +70,8 @@ def build_reproduction_plan(config_root: str | Path) -> dict[str, Any]:
                     raise ConfigError(f"SAE {sae_id} does not belong to model {model_id}")
                 for task_id in experiment["matrix"]["tasks"]:
                     task = _require_known(tasks, task_id, "task")
-                    rows.extend(
-                        [
-                            _row(
+                    base_rows = [
+                        _row(
                                 stage="feature_extraction",
                                 experiment_id=experiment_id,
                                 task=task,
@@ -77,8 +82,8 @@ def build_reproduction_plan(config_root: str | Path) -> dict[str, Any]:
                                     "${ARTIFACT_ROOT}/features/"
                                     f"{model_id}/{task_id}/l{sae['layer']}"
                                 ),
-                            ),
-                            _row(
+                        ),
+                        _row(
                                 stage="sae_code_extraction",
                                 experiment_id=experiment_id,
                                 task=task,
@@ -89,8 +94,8 @@ def build_reproduction_plan(config_root: str | Path) -> dict[str, Any]:
                                     "${ARTIFACT_ROOT}/codes/"
                                     f"{sae_id}/{task_id}/val"
                                 ),
-                            ),
-                            _row(
+                        ),
+                        _row(
                                 stage="sae_probe",
                                 experiment_id=experiment_id,
                                 task=task,
@@ -101,20 +106,8 @@ def build_reproduction_plan(config_root: str | Path) -> dict[str, Any]:
                                     "${ARTIFACT_ROOT}/probes/sae/"
                                     f"{sae_id}/{task_id}/val"
                                 ),
-                            ),
-                            _row(
-                                stage="feature_ranking",
-                                experiment_id=experiment_id,
-                                task=task,
-                                model_id=model_id,
-                                sae_id=sae_id,
-                                command="rank-features",
-                                artifact_dir=(
-                                    "${ARTIFACT_ROOT}/analysis/ranking/"
-                                    f"{sae_id}/{task_id}/val"
-                                ),
-                            ),
-                            _row(
+                        ),
+                        _row(
                                 stage="contribution_scores",
                                 experiment_id=experiment_id,
                                 task=task,
@@ -125,33 +118,49 @@ def build_reproduction_plan(config_root: str | Path) -> dict[str, Any]:
                                     "${ARTIFACT_ROOT}/analysis/contribution/"
                                     f"{sae_id}/{task_id}/val"
                                 ),
-                            ),
-                            _row(
-                                stage="subset_usage",
-                                experiment_id=experiment_id,
-                                task=task,
-                                model_id=model_id,
-                                sae_id=sae_id,
-                                command="compute-subset-usage",
-                                artifact_dir=(
-                                    "${ARTIFACT_ROOT}/analysis/subset_usage/"
-                                    f"{sae_id}/{task_id}/val"
+                        ),
+                    ]
+                    rows.extend(base_rows)
+                    task_slug = _task_slug(task_id)
+                    for ranking_method in ranking_methods:
+                        control_root = (
+                            "${ARTIFACT_ROOT}/analysis/ranking_controls/"
+                            f"{sae_id}/{task_slug}/{ranking_method}"
+                        )
+                        rows.extend(
+                            [
+                                _row(
+                                    stage="feature_ranking",
+                                    experiment_id=experiment_id,
+                                    task=task,
+                                    model_id=model_id,
+                                    sae_id=sae_id,
+                                    command="rank-features",
+                                    artifact_dir=f"{control_root}/ranking",
+                                    ranking_method=ranking_method,
                                 ),
-                            ),
-                            _row(
-                                stage="feature_ablation",
-                                experiment_id=experiment_id,
-                                task=task,
-                                model_id=model_id,
-                                sae_id=sae_id,
-                                command="ablate-features",
-                                artifact_dir=(
-                                    "${ARTIFACT_ROOT}/analysis/ablation/"
-                                    f"{sae_id}/{task_id}/val"
+                                _row(
+                                    stage="subset_usage",
+                                    experiment_id=experiment_id,
+                                    task=task,
+                                    model_id=model_id,
+                                    sae_id=sae_id,
+                                    command="compute-subset-usage",
+                                    artifact_dir=f"{control_root}/subset_usage",
+                                    ranking_method=ranking_method,
                                 ),
-                            ),
-                        ]
-                    )
+                                _row(
+                                    stage="feature_ablation",
+                                    experiment_id=experiment_id,
+                                    task=task,
+                                    model_id=model_id,
+                                    sae_id=sae_id,
+                                    command="ablate-features",
+                                    artifact_dir=f"{control_root}/ablation",
+                                    ranking_method=ranking_method,
+                                ),
+                            ]
+                        )
         elif mode == "compute_usage":
             for pair in experiment["model_sae_pairs"]:
                 model_id = pair["model"]
@@ -166,6 +175,7 @@ def build_reproduction_plan(config_root: str | Path) -> dict[str, Any]:
                         "task_type": "feature_usage",
                         "model_id": model_id,
                         "sae_id": sae_id,
+                        "ranking_method": "",
                         "command": "compute-usage",
                         "artifact_dir": (
                             "${ARTIFACT_ROOT}/analysis/availability/"
@@ -222,6 +232,7 @@ def _row(
     sae_id: str,
     command: str,
     artifact_dir: str,
+    ranking_method: str = "",
 ) -> dict[str, str]:
     return {
         "stage": stage,
@@ -230,9 +241,22 @@ def _row(
         "task_type": str(task["type"]),
         "model_id": model_id,
         "sae_id": sae_id,
+        "ranking_method": ranking_method,
         "command": command,
         "artifact_dir": artifact_dir,
     }
+
+
+def _task_slug(task_id: str) -> str:
+    if task_id == "imagenet_1k":
+        return "imagenet_val"
+    if task_id == "nyuv2_depth":
+        return "nyuv2_val"
+    if task_id == "ade20k_segmentation":
+        return "ade20k_val"
+    if task_id == "clevr_count":
+        return "clevr_count_val"
+    return f"{task_id}_val"
 
 
 def _require_known(records: dict[str, dict[str, Any]], record_id: str, name: str) -> dict[str, Any]:
