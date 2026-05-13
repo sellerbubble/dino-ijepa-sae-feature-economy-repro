@@ -88,3 +88,16 @@ dependencies:
 ```bash
 feature-economy check-runtime --profile experiments --require
 ```
+
+For DINO HuggingFace extraction on offline clusters, pre-download the model
+directory on a machine with network access, copy it to the target machine, and
+pass it as an override:
+
+```bash
+feature-economy extract-features \
+  --backend huggingface \
+  --model-id dino_v2_base \
+  --hf-name-or-path /path/to/facebook/dinov2-base \
+  --local-files-only \
+  ...
+```

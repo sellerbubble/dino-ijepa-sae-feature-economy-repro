@@ -117,6 +117,7 @@ def extract_huggingface_features(
     dtype: str = "float32",
     max_examples: int | None = None,
     local_files_only: bool = False,
+    hf_name_or_path: str | None = None,
 ) -> Path:
     """Extract hidden states with a HuggingFace vision backbone.
 
@@ -147,7 +148,7 @@ def extract_huggingface_features(
     if not records:
         raise ValueError("no records selected for feature extraction")
 
-    hf_name = str(model_config["hf_name"])
+    hf_name = str(hf_name_or_path or model_config["hf_name"])
     policy = transform_policy_from_config(dict(model_config["transform"]))
     torch, auto_model = _import_huggingface_runtime()
     model = auto_model.from_pretrained(hf_name, local_files_only=local_files_only)

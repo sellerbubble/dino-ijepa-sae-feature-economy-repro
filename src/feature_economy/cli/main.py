@@ -500,6 +500,14 @@ def build_parser() -> argparse.ArgumentParser:
     extract_features.add_argument("--max-examples", type=int, default=None)
     extract_features.add_argument("--local-files-only", action="store_true")
     extract_features.add_argument(
+        "--hf-name-or-path",
+        default=None,
+        help=(
+            "Optional HuggingFace model id or local checkpoint directory override "
+            "for --backend huggingface. Use this for offline self-provided DINO checkpoints."
+        ),
+    )
+    extract_features.add_argument(
         "--checkpoint",
         type=Path,
         default=None,
@@ -1039,6 +1047,7 @@ def main() -> int:
                 dtype=args.dtype,
                 max_examples=args.max_examples,
                 local_files_only=args.local_files_only,
+                hf_name_or_path=args.hf_name_or_path,
             )
         elif args.backend == "torchscript":
             from feature_economy.models import extract_torchscript_features

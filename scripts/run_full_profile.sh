@@ -38,6 +38,7 @@ Environment:
   RIDGE=0.001           Closed-form probe ridge value.
   MAX_EXAMPLES=1000     Optional small real-data slice.
   LOCAL_FILES_ONLY=1    Pass --local-files-only to HuggingFace extraction.
+  DINO_HF_NAME_OR_PATH  Optional local DINO checkpoint directory or HF model id.
   MAKE_FIGURES=0        Skip overview figure export.
 
 Supported profiles:
@@ -116,6 +117,9 @@ if [[ -n "$MAX_EXAMPLES" ]]; then
 fi
 if [[ "$LOCAL_FILES_ONLY" == "1" ]]; then
   optional_args+=(--local-files-only)
+fi
+if [[ -n "${DINO_HF_NAME_OR_PATH:-}" ]]; then
+  optional_args+=(--hf-name-or-path "$DINO_HF_NAME_OR_PATH")
 fi
 
 run mkdir -p \

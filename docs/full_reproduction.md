@@ -90,6 +90,16 @@ export PYTHONPATH=$PWD/src
 bash scripts/run_full_profile.sh dino_imagenet_l11
 ```
 
+On offline clusters, point the HuggingFace backend at a pre-downloaded DINO
+checkpoint directory and force local loading:
+
+```bash
+export DINO_HF_NAME_OR_PATH=/path/to/facebook/dinov2-base
+export LOCAL_FILES_ONLY=1
+
+bash scripts/run_full_profile.sh dino_imagenet_l11
+```
+
 This first public launcher is intentionally conservative: it starts with one
 vertical slice and preserves the same artifact layout expected by the broader
 paper-style chain. Additional model, layer, task, and SAE profiles should extend

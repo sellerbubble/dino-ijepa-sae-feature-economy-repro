@@ -75,6 +75,15 @@ Use the dry run first to inspect every command and output path. The manual
 commands below are the expanded version of the same chain for users who need to
 customize individual stages.
 
+If the GPU machine cannot reach HuggingFace, pre-download the DINO checkpoint
+elsewhere and pass its local directory:
+
+```bash
+export DINO_HF_NAME_OR_PATH=/path/to/facebook/dinov2-base
+export LOCAL_FILES_ONLY=1
+bash scripts/run_full_profile.sh dino_imagenet_l11
+```
+
 Set paths:
 
 ```bash
@@ -116,6 +125,7 @@ python -m feature_economy.cli.main extract-features \
   --expected-split val \
   --batch-size 16 \
   --device cuda \
+  --hf-name-or-path "${DINO_HF_NAME_OR_PATH:-facebook/dinov2-base}" \
   --output-dir "$ARTIFACT_ROOT/features/dino_v2_base/imagenet_val_l11"
 ```
 
