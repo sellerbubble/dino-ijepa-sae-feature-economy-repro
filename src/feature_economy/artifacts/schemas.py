@@ -54,6 +54,46 @@ def validate_run_manifest(record: Mapping[str, Any]) -> None:
     _require_mapping(record["outputs"], "run_manifest.outputs")
 
 
+def validate_runtime_dependency_report(record: Mapping[str, Any]) -> None:
+    """Validate runtime dependency reports written by `check-runtime`."""
+
+    record = _require_mapping(record, "runtime_dependency_report")
+    _require_keys(
+        record,
+        ["artifact_type", "schema_version", "profile", "all_available", "dependencies"],
+        "runtime_dependency_report",
+    )
+    if record["artifact_type"] != "runtime_dependency_report":
+        raise SchemaError(
+            "runtime_dependency_report.artifact_type must be runtime_dependency_report"
+        )
+    if not isinstance(record["profile"], str) or not record["profile"]:
+        raise SchemaError("runtime_dependency_report.profile must be a non-empty string")
+    if not isinstance(record["all_available"], bool):
+        raise SchemaError("runtime_dependency_report.all_available must be boolean")
+    dependencies = record["dependencies"]
+    if not isinstance(dependencies, list):
+        raise SchemaError("runtime_dependency_report.dependencies must be a list")
+    for index, dependency in enumerate(dependencies):
+        dependency = _require_mapping(
+            dependency,
+            f"runtime_dependency_report.dependencies[{index}]",
+        )
+        _require_keys(
+            dependency,
+            ["module", "available"],
+            f"runtime_dependency_report.dependencies[{index}]",
+        )
+        if not isinstance(dependency["module"], str) or not dependency["module"]:
+            raise SchemaError(
+                f"runtime_dependency_report.dependencies[{index}].module must be a non-empty string"
+            )
+        if not isinstance(dependency["available"], bool):
+            raise SchemaError(
+                f"runtime_dependency_report.dependencies[{index}].available must be boolean"
+            )
+
+
 def validate_array_contract_summary(record: Mapping[str, Any]) -> None:
     """Validate `.npz` array contract validation reports."""
 

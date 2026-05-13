@@ -26,6 +26,7 @@ from .schemas import (
     validate_probe_summary,
     validate_reproduction_run_plan,
     validate_run_manifest,
+    validate_runtime_dependency_report,
     validate_sae_code_summary,
     validate_subset_usage_summary,
 )
@@ -43,6 +44,7 @@ VALIDATORS: dict[str, Callable[[Mapping[str, Any]], None]] = {
     "feature_ablation_summary": validate_ablation_summary,
     "array_contract_validation": validate_array_contract_summary,
     "run_manifest": validate_run_manifest,
+    "runtime_dependency_report": validate_runtime_dependency_report,
     "reproduction_run_plan": validate_reproduction_run_plan,
     "artifact_bundle_check": validate_artifact_bundle_check,
 }
@@ -156,6 +158,8 @@ def _index_json_file(path: Path) -> dict[str, Any]:
 def _infer_record_type(payload: Mapping[str, Any], path: Path) -> str:
     if "record_type" in payload:
         return str(payload["record_type"])
+    if payload.get("artifact_type") == "runtime_dependency_report":
+        return "runtime_dependency_report"
     if path.name == "run_manifest.json":
         return "run_manifest"
     return "unknown"

@@ -15,6 +15,7 @@ from .schemas import (
     validate_probe_summary,
     validate_reproduction_run_plan,
     validate_run_manifest,
+    validate_runtime_dependency_report,
     validate_sae_code_summary,
     validate_subset_usage_summary,
 )
@@ -34,6 +35,7 @@ __all__ = [
     "validate_probe_summary",
     "validate_reproduction_run_plan",
     "validate_run_manifest",
+    "validate_runtime_dependency_report",
     "validate_sae_code_summary",
     "validate_subset_usage_summary",
     "write_artifact_index_csv",

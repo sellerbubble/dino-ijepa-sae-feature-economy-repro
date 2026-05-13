@@ -82,6 +82,41 @@ class ArtifactIndexTests(unittest.TestCase):
             self.assertEqual(index["num_records"], 1)
             self.assertEqual(index["records"][0]["record_type"], "array_contract_validation")
 
+    def test_index_runtime_dependency_report(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmpdir = Path(tmpdir)
+            artifact_dir = tmpdir / "artifacts"
+            artifact_dir.mkdir()
+            (artifact_dir / "runtime_check.json").write_text(
+                json.dumps(
+                    {
+                        "artifact_type": "runtime_dependency_report",
+                        "schema_version": 1,
+                        "profile": "experiments",
+                        "all_available": True,
+                        "dependencies": [
+                            {
+                                "module": "numpy",
+                                "available": True,
+                                "version": "1.0",
+                                "error": None,
+                            }
+                        ],
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+
+            index = build_artifact_index(
+                artifact_dir,
+                tmpdir / "artifact_index.json",
+                require_valid=True,
+            )
+
+            self.assertEqual(index["num_records"], 1)
+            self.assertEqual(index["records"][0]["record_type"], "runtime_dependency_report")
+
     def test_require_valid_rejects_invalid_json(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             tmpdir = Path(tmpdir)
