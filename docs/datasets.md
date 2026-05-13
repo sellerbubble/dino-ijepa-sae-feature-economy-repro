@@ -36,6 +36,25 @@ feature-economy export-targets \
   --output-dir /path/to/targets/nyuv2_depth/val
 ```
 
+For official ADE20K annotations, masks use `0` for background/ignored pixels
+and `1..150` for classes. The public full-profile runner converts this to the
+probe convention `0..149` plus ignore index `255`:
+
+```bash
+feature-economy export-targets \
+  --manifest /path/to/ade20k/val_manifest.jsonl \
+  --task-type dense_segmentation \
+  --expected-split val \
+  --features-npz /path/to/features.npz \
+  --segmentation-ignore-value 0 \
+  --segmentation-label-offset -1 \
+  --segmentation-output-ignore-index 255 \
+  --output-dir /path/to/targets/ade20k_segmentation/val
+```
+
+If your segmentation masks are already stored as `0..149` with `255` ignored
+pixels, omit the three segmentation remapping flags.
+
 Validation command:
 
 ```bash

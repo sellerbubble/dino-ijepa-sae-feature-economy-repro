@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Role: launch a full paper-style public reproduction profile.
-# Status: canonical public launcher; supports ImageNet and NYUv2 full-profile slices.
+# Status: canonical public launcher; supports ImageNet, NYUv2, and ADE20K full-profile slices.
 # Used by: docs/full_reproduction.md and remote validation plans.
 # Inputs: DATA_ROOT, SAE_ROOT, ARTIFACT_ROOT, optional DEVICE/BATCH_SIZE/DRY_RUN.
 # Outputs: feature, code, probe, analysis, index, table, figure, and log artifacts.
@@ -64,6 +64,8 @@ Supported profiles:
   ijepa_imagenet_l31
   dino_nyuv2_l11
   ijepa_nyuv2_l31
+  dino_ade20k_l11
+  ijepa_ade20k_l31
 EOF
 }
 
@@ -75,7 +77,9 @@ fi
 if [[ "$PROFILE" != "dino_imagenet_l11" \
   && "$PROFILE" != "ijepa_imagenet_l31" \
   && "$PROFILE" != "dino_nyuv2_l11" \
-  && "$PROFILE" != "ijepa_nyuv2_l31" ]]; then
+  && "$PROFILE" != "ijepa_nyuv2_l31" \
+  && "$PROFILE" != "dino_ade20k_l11" \
+  && "$PROFILE" != "ijepa_ade20k_l31" ]]; then
   echo "Unsupported profile: $PROFILE" >&2
   usage >&2
   exit 2
@@ -96,6 +100,10 @@ SAE_ROOT="${SAE_ROOT:-/path/to/sae_checkpoints}"
 ARTIFACT_ROOT="${ARTIFACT_ROOT:-/path/to/output_artifacts}"
 
 SPLIT="val"
+NUM_CLASSES="${NUM_CLASSES:-}"
+IGNORE_INDEX="${IGNORE_INDEX:-}"
+SEGMENTATION_IGNORE_VALUE="${SEGMENTATION_IGNORE_VALUE:-}"
+SEGMENTATION_LABEL_OFFSET="${SEGMENTATION_LABEL_OFFSET:-}"
 case "$PROFILE" in
   dino_imagenet_l11|ijepa_imagenet_l31)
     TASK_ID="imagenet_1k"
@@ -109,15 +117,27 @@ case "$PROFILE" in
     TASK_SLUG="nyuv2_val"
     MANIFEST="$DATA_ROOT/nyuv2/val_manifest.jsonl"
     ;;
+  dino_ade20k_l11|ijepa_ade20k_l31)
+    TASK_ID="ade20k_segmentation"
+    TASK_TYPE="dense_segmentation"
+    TASK_SLUG="ade20k_val"
+    MANIFEST="$DATA_ROOT/ade20k/val_manifest.jsonl"
+    NUM_CLASSES="${NUM_CLASSES:-150}"
+    IGNORE_INDEX="${IGNORE_INDEX:-255}"
+    # Official ADE20K annotations use 0 for background/ignore and 1..150
+    # for semantic classes. Public probes expect 0..149 plus IGNORE_INDEX.
+    SEGMENTATION_IGNORE_VALUE="${SEGMENTATION_IGNORE_VALUE:-0}"
+    SEGMENTATION_LABEL_OFFSET="${SEGMENTATION_LABEL_OFFSET:--1}"
+    ;;
 esac
 
-if [[ "$PROFILE" == "dino_imagenet_l11" || "$PROFILE" == "dino_nyuv2_l11" ]]; then
+if [[ "$PROFILE" == "dino_imagenet_l11" || "$PROFILE" == "dino_nyuv2_l11" || "$PROFILE" == "dino_ade20k_l11" ]]; then
   MODEL_ID="dino_v2_base"
   SAE_ID="dino_l11_topk32_exp4"
   LAYER="11"
   FEATURE_BACKEND="huggingface"
   FEATURE_DIR="$ARTIFACT_ROOT/features/$MODEL_ID/${TASK_SLUG}_l11"
-elif [[ "$PROFILE" == "ijepa_imagenet_l31" || "$PROFILE" == "ijepa_nyuv2_l31" ]]; then
+elif [[ "$PROFILE" == "ijepa_imagenet_l31" || "$PROFILE" == "ijepa_nyuv2_l31" || "$PROFILE" == "ijepa_ade20k_l31" ]]; then
   MODEL_ID="ijepa_vit_h14"
   SAE_ID="ijepa_l31_topk32_exp4"
   LAYER="31"
@@ -141,6 +161,7 @@ if [[ "$CONTRIBUTION_SCORING_METHOD" == "auto" ]]; then
     CONTRIBUTION_SCORING_METHOD="weight_activation"
   fi
 fi
+SEGMENTATION_LABEL_OFFSET="${SEGMENTATION_LABEL_OFFSET:-0}"
 SAE_CHECKPOINT="$SAE_ROOT/$SAE_ID/final_sae.pt"
 LIGHTWEIGHT_SAE="$ARTIFACT_ROOT/checkpoints/${SAE_ID}_lightweight.npz"
 CODES_DIR="$ARTIFACT_ROOT/codes/$SAE_ID/$TASK_SLUG"
@@ -288,12 +309,24 @@ run python -m feature_economy.cli.main validate-arrays \
 
 probe_target_args=()
 if [[ "$TASK_TYPE" == "dense_depth" || "$TASK_TYPE" == "dense_segmentation" ]]; then
-  run python -m feature_economy.cli.main export-targets \
-    --manifest "$MANIFEST" \
-    --task-type "$TASK_TYPE" \
-    --expected-split "$SPLIT" \
-    --features-npz "$FEATURE_DIR/features.npz" \
+  export_target_args=(
+    --manifest "$MANIFEST"
+    --task-type "$TASK_TYPE"
+    --expected-split "$SPLIT"
+    --features-npz "$FEATURE_DIR/features.npz"
     --output-dir "$TARGET_DIR"
+  )
+  if [[ "$TASK_TYPE" == "dense_segmentation" ]]; then
+    export_target_args+=(
+      --segmentation-output-ignore-index "$IGNORE_INDEX"
+      --segmentation-label-offset "$SEGMENTATION_LABEL_OFFSET"
+    )
+    if [[ -n "$SEGMENTATION_IGNORE_VALUE" ]]; then
+      export_target_args+=(--segmentation-ignore-value "$SEGMENTATION_IGNORE_VALUE")
+    fi
+  fi
+  run python -m feature_economy.cli.main export-targets \
+    "${export_target_args[@]}"
 
   run python -m feature_economy.cli.main validate-arrays \
     --npz "$TARGET_DIR/targets.npz" \
@@ -303,6 +336,9 @@ if [[ "$TASK_TYPE" == "dense_depth" || "$TASK_TYPE" == "dense_segmentation" ]]; 
     --expected-split "$SPLIT"
 
   probe_target_args=(--targets-npz "$TARGET_DIR/targets.npz")
+  if [[ "$TASK_TYPE" == "dense_segmentation" ]]; then
+    probe_target_args+=(--num-classes "$NUM_CLASSES" --ignore-index "$IGNORE_INDEX")
+  fi
 fi
 
 run python -m feature_economy.cli.main probe-native \
@@ -437,6 +473,10 @@ task_id=$TASK_ID
 task_type=$TASK_TYPE
 feature_backend=$FEATURE_BACKEND
 contribution_scoring_method=$CONTRIBUTION_SCORING_METHOD
+num_classes=$NUM_CLASSES
+ignore_index=$IGNORE_INDEX
+segmentation_ignore_value=$SEGMENTATION_IGNORE_VALUE
+segmentation_label_offset=$SEGMENTATION_LABEL_OFFSET
 artifact_root=$ARTIFACT_ROOT
 manifest=$MANIFEST
 sae_checkpoint=$SAE_CHECKPOINT

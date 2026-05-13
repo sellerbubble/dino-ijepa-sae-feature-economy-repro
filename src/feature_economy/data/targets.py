@@ -27,6 +27,9 @@ def export_dense_targets(
     target_shape: tuple[int, int] | None = None,
     max_examples: int | None = None,
     target_key: str = "targets",
+    segmentation_ignore_value: int | None = None,
+    segmentation_output_ignore_index: int = 255,
+    segmentation_label_offset: int = 0,
 ) -> Path:
     """Export dense targets aligned to a manifest and optional feature grid."""
 
@@ -66,6 +69,12 @@ def export_dense_targets(
             target = _load_segmentation_target(source)
             if target_shape is not None:
                 target = _resize_integer_target(target, target_shape)
+            target = _remap_segmentation_target(
+                target,
+                ignore_value=segmentation_ignore_value,
+                output_ignore_index=segmentation_output_ignore_index,
+                label_offset=segmentation_label_offset,
+            )
             target = target.astype(np.int64)
         targets.append(target)
         source_paths.append(str(source))
@@ -92,6 +101,13 @@ def export_dense_targets(
         "expected_split": expected_split,
         "features_npz": str(features_npz) if features_npz is not None else None,
         "fixture": False,
+        "segmentation_ignore_value": segmentation_ignore_value,
+        "segmentation_output_ignore_index": segmentation_output_ignore_index
+        if task_type == "dense_segmentation"
+        else None,
+        "segmentation_label_offset": segmentation_label_offset
+        if task_type == "dense_segmentation"
+        else None,
     }
     summary_path = output_dir / "dense_target_export_summary.json"
     summary_path.write_text(json.dumps(summary, indent=2) + "\n", encoding="utf-8")
@@ -108,6 +124,13 @@ def export_dense_targets(
             "features_npz": str(features_npz) if features_npz is not None else None,
             "target_shape": list(target_shape) if target_shape is not None else None,
             "max_examples": max_examples,
+            "segmentation_ignore_value": segmentation_ignore_value,
+            "segmentation_output_ignore_index": segmentation_output_ignore_index
+            if task_type == "dense_segmentation"
+            else None,
+            "segmentation_label_offset": segmentation_label_offset
+            if task_type == "dense_segmentation"
+            else None,
         },
         "outputs": {
             "targets": str(target_path),
@@ -154,6 +177,29 @@ def _load_segmentation_target(path: Path) -> np.ndarray:
         key = "segmentation" if "segmentation" in arrays else arrays.files[0]
         return np.asarray(arrays[key], dtype=np.int64)
     return np.asarray(_load_image(path), dtype=np.int64)
+
+
+def _remap_segmentation_target(
+    target: np.ndarray,
+    *,
+    ignore_value: int | None,
+    output_ignore_index: int,
+    label_offset: int,
+) -> np.ndarray:
+    """Apply optional raw-mask remapping before segmentation probe export."""
+
+    remapped = np.asarray(target, dtype=np.int64).copy()
+    ignore_mask = None
+    if ignore_value is not None:
+        ignore_mask = remapped == ignore_value
+    if label_offset != 0:
+        if ignore_mask is None:
+            remapped = remapped + label_offset
+        else:
+            remapped[~ignore_mask] = remapped[~ignore_mask] + label_offset
+    if ignore_mask is not None:
+        remapped[ignore_mask] = output_ignore_index
+    return remapped
 
 
 def _load_image(path: Path) -> Any:

@@ -116,6 +116,18 @@ export LOCAL_FILES_ONLY=1
 bash scripts/run_full_profile.sh dino_nyuv2_l11
 ```
 
+The same launcher also includes ADE20K dense-segmentation vertical slices. An
+ADE20K manifest should live at `$DATA_ROOT/ade20k/val_manifest.jsonl` and
+include `image`, `segmentation`, and `split` fields. Official ADE20K masks are
+remapped from `0` ignore/background plus `1..150` classes into the public probe
+convention `255` ignore plus `0..149` classes:
+
+```bash
+export DINO_HF_NAME_OR_PATH=/path/to/facebook/dinov2-base
+export LOCAL_FILES_ONLY=1
+bash scripts/run_full_profile.sh dino_ade20k_l11
+```
+
 Set paths:
 
 ```bash

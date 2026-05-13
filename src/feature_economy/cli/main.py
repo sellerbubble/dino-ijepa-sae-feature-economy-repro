@@ -616,6 +616,31 @@ def build_parser() -> argparse.ArgumentParser:
     export_targets.add_argument("--width", type=int, default=None)
     export_targets.add_argument("--max-examples", type=int, default=None)
     export_targets.add_argument("--target-key", default="targets")
+    export_targets.add_argument(
+        "--segmentation-ignore-value",
+        type=int,
+        default=None,
+        help=(
+            "Optional raw segmentation label value to map to "
+            "--segmentation-output-ignore-index."
+        ),
+    )
+    export_targets.add_argument(
+        "--segmentation-output-ignore-index",
+        type=int,
+        default=255,
+        help="Ignore index written into exported dense_segmentation targets.",
+    )
+    export_targets.add_argument(
+        "--segmentation-label-offset",
+        type=int,
+        default=0,
+        help=(
+            "Optional offset applied to non-ignored segmentation labels. "
+            "For official ADE20K masks, use --segmentation-ignore-value 0 "
+            "--segmentation-label-offset -1."
+        ),
+    )
     index_artifacts = subparsers.add_parser(
         "index-artifacts",
         help="Build a JSON/CSV index for public reproduction artifacts.",
@@ -1184,6 +1209,9 @@ def main() -> int:
             target_shape=target_shape,
             max_examples=args.max_examples,
             target_key=args.target_key,
+            segmentation_ignore_value=args.segmentation_ignore_value,
+            segmentation_output_ignore_index=args.segmentation_output_ignore_index,
+            segmentation_label_offset=args.segmentation_label_offset,
         )
         print(f"Wrote dense target export summary to {summary_path}")
         return 0

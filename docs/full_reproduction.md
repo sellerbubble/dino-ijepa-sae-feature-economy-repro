@@ -67,8 +67,8 @@ stages: feature extraction -> SAE codes -> SAE probe -> Availability -> Access -
 ```
 
 The matched I-JEPA/ImageNet profile exercises the same classification chain.
-The NYUv2 profiles add dense target export and patch-grid alignment, so they are
-the recommended next check before moving to ADE20K.
+The NYUv2 and ADE20K profiles add dense target export and patch-grid alignment,
+covering the public dense-depth and dense-segmentation paths.
 
 Supported full-profile names:
 
@@ -77,6 +77,8 @@ dino_imagenet_l11
 ijepa_imagenet_l31
 dino_nyuv2_l11
 ijepa_nyuv2_l31
+dino_ade20k_l11
+ijepa_ade20k_l31
 ```
 
 Preview the complete command chain without running GPU work:
@@ -128,6 +130,19 @@ export DINO_HF_NAME_OR_PATH=/path/to/facebook/dinov2-base
 export LOCAL_FILES_ONLY=1
 
 bash scripts/run_full_profile.sh dino_nyuv2_l11
+```
+
+For ADE20K dense-segmentation profiles, provide
+`DATA_ROOT/ade20k/val_manifest.jsonl` with `image`, `segmentation`, and `split`
+fields. Official ADE20K masks are supported directly: the launcher maps raw
+`0` pixels to ignore index `255` and shifts semantic labels `1..150` to
+`0..149` before fitting public segmentation probes:
+
+```bash
+export DINO_HF_NAME_OR_PATH=/path/to/facebook/dinov2-base
+export LOCAL_FILES_ONLY=1
+
+bash scripts/run_full_profile.sh dino_ade20k_l11
 ```
 
 This public launcher is intentionally conservative: it adds vertical slices
