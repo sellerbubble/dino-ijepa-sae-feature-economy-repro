@@ -1,0 +1,9 @@
+id: dino_l3_topk32_exp4
+model_id: dino_v2_base
+layer: 3
+checkpoint: ${SAE_ROOT}/dino_l3_topk32_exp4/final_sae.pt
+dict_size: null
+topk: 32
+expansion: 4
+normalize_activations: layer_norm
+trained_on: imagenet_1k_train

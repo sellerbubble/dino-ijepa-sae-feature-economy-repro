@@ -189,6 +189,8 @@ def build_reproduction_plan(config_root: str | Path) -> dict[str, Any]:
         else:
             raise ConfigError(f"unsupported experiment mode in planner: {mode}")
 
+    rows.extend(_layer_sweep_rows(models=models, saes=saes, sweeps=sweeps))
+
     return {
         "record_type": "reproduction_run_plan",
         "config_root": str(config_root),
@@ -245,6 +247,74 @@ def _row(
         "command": command,
         "artifact_dir": artifact_dir,
     }
+
+
+def _layer_sweep_rows(
+    *,
+    models: dict[str, dict[str, Any]],
+    saes: dict[str, dict[str, Any]],
+    sweeps: dict[str, dict[str, Any]],
+) -> list[dict[str, str]]:
+    sweep = sweeps.get("layer_sweep")
+    if not sweep:
+        return []
+    dataset_split = str(sweep["dataset_split"])
+    rows: list[dict[str, str]] = []
+    for group in sweep["groups"]:
+        if not group.get("enabled_in_plan", False):
+            continue
+        group_id = str(group["id"])
+        for pair in group.get("model_sae_pairs", []):
+            model_id = str(pair["model"])
+            sae_id = str(pair["sae"])
+            _require_known(models, model_id, "model")
+            sae = _require_known(saes, sae_id, "sae")
+            if sae["model_id"] != model_id:
+                raise ConfigError(f"SAE {sae_id} does not belong to model {model_id}")
+            layer = int(sae["layer"])
+            experiment_id = f"layer_sweep:{group_id}"
+            task = {"id": dataset_split, "type": "feature_usage"}
+            rows.extend(
+                [
+                    _row(
+                        stage="feature_extraction",
+                        experiment_id=experiment_id,
+                        task=task,
+                        model_id=model_id,
+                        sae_id="",
+                        command="extract-features",
+                        artifact_dir=(
+                            "${ARTIFACT_ROOT}/features/"
+                            f"{model_id}/{dataset_split}/l{layer}"
+                        ),
+                    ),
+                    _row(
+                        stage="sae_code_extraction",
+                        experiment_id=experiment_id,
+                        task=task,
+                        model_id=model_id,
+                        sae_id=sae_id,
+                        command="extract-sae-codes",
+                        artifact_dir=(
+                            "${ARTIFACT_ROOT}/codes/"
+                            f"{sae_id}/{dataset_split}"
+                        ),
+                    ),
+                    _row(
+                        stage="availability",
+                        experiment_id=experiment_id,
+                        task=task,
+                        model_id=model_id,
+                        sae_id=sae_id,
+                        command="compute-usage",
+                        artifact_dir=(
+                            "${ARTIFACT_ROOT}/analysis/layer_sweeps/"
+                            f"{group_id}/{sae_id}/availability"
+                        ),
+                    ),
+                ]
+            )
+    return rows
 
 
 def _task_slug(task_id: str) -> str:

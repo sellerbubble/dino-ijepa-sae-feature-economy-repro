@@ -5,8 +5,10 @@ hf_name: null
 architecture: vit
 patch_size: 14
 default_layers:
-  last: 31
+  representative_early: 8
+  representative_middle: 20
   second_last: 30
+  last: 31
 output:
   token_format: patch_tokens
 transform:

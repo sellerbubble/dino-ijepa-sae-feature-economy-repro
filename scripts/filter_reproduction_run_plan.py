@@ -23,6 +23,7 @@ CSV_COLUMNS = [
     "task_type",
     "model_id",
     "sae_id",
+    "ranking_method",
     "command",
     "artifact_dir",
 ]

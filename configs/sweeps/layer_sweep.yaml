@@ -1,0 +1,46 @@
+id: layer_sweep
+mode: layer_sweep
+dataset_split: imagenet_1k_val
+groups:
+  - id: second_last
+    description: Second-last layer controls used to test final-layer amplification.
+    enabled_in_plan: true
+    model_sae_pairs:
+      - model: dino_v2_base
+        sae: dino_l10_topk32_exp4
+      - model: ijepa_vit_h14
+        sae: ijepa_l30_topk32_exp4
+  - id: representative
+    description: Compact representative-layer diagnostic grid for availability trends.
+    enabled_in_plan: true
+    model_sae_pairs:
+      - model: dino_v2_base
+        sae: dino_l3_topk32_exp4
+      - model: dino_v2_base
+        sae: dino_l7_topk32_exp4
+      - model: dino_v2_base
+        sae: dino_l9_topk32_exp4
+      - model: dino_v2_base
+        sae: dino_l11_topk32_exp4
+      - model: ijepa_vit_h14
+        sae: ijepa_l8_topk32_exp4
+      - model: ijepa_vit_h14
+        sae: ijepa_l20_topk32_exp4
+      - model: ijepa_vit_h14
+        sae: ijepa_l31_topk32_exp4
+  - id: all_layer_diagnostics
+    description: Optional full layer sweep; disabled in the default run plan until all SAE checkpoints are provided.
+    enabled_in_plan: false
+    model_layer_ranges:
+      - model: dino_v2_base
+        layers: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+      - model: ijepa_vit_h14
+        layers: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31]
+outputs:
+  root: ${ARTIFACT_ROOT}/analysis/layer_sweeps/{group_id}/{sae_id}
+  features: ${ARTIFACT_ROOT}/features/{model_id}/{dataset_split}/l{layer}
+  codes: ${ARTIFACT_ROOT}/codes/{sae_id}/{dataset_split}
+  availability: availability
+notes:
+  - Default layer-sweep rows cover second-last and representative layers only.
+  - Full all-layer diagnostics are documented here but intentionally opt-in.

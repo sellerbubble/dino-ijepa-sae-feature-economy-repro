@@ -81,14 +81,18 @@ Environment:
   MAKE_FIGURES=0        Skip overview figure export.
 
 Supported profiles:
-  dino_imagenet_l11
-  ijepa_imagenet_l31
-  dino_nyuv2_l11
-  ijepa_nyuv2_l31
-  dino_ade20k_l11
-  ijepa_ade20k_l31
-  dino_clevr_count_l11
-  ijepa_clevr_count_l31
+  dino_imagenet_l<LAYER>
+  ijepa_imagenet_l<LAYER>
+  dino_nyuv2_l<LAYER>
+  ijepa_nyuv2_l<LAYER>
+  dino_ade20k_l<LAYER>
+  ijepa_ade20k_l<LAYER>
+  dino_clevr_count_l<LAYER>
+  ijepa_clevr_count_l<LAYER>
+
+Canonical last-layer profiles are dino_*_l11 and ijepa_*_l31. Layer-sweep
+diagnostics can reuse the same launcher with configured SAE checkpoints such as
+dino_nyuv2_l10 or ijepa_imagenet_l30.
 EOF
 }
 
@@ -97,14 +101,7 @@ if [[ "${PROFILE}" == "-h" || "${PROFILE}" == "--help" ]]; then
   exit 0
 fi
 
-if [[ "$PROFILE" != "dino_imagenet_l11" \
-  && "$PROFILE" != "ijepa_imagenet_l31" \
-  && "$PROFILE" != "dino_nyuv2_l11" \
-  && "$PROFILE" != "ijepa_nyuv2_l31" \
-  && "$PROFILE" != "dino_ade20k_l11" \
-  && "$PROFILE" != "ijepa_ade20k_l31" \
-  && "$PROFILE" != "dino_clevr_count_l11" \
-  && "$PROFILE" != "ijepa_clevr_count_l31" ]]; then
+if [[ ! "$PROFILE" =~ ^(dino|ijepa)_(imagenet|nyuv2|ade20k|clevr_count)_l[0-9]+$ ]]; then
   echo "Unsupported profile: $PROFILE" >&2
   usage >&2
   exit 2
@@ -137,7 +134,7 @@ IGNORE_INDEX="${IGNORE_INDEX:-}"
 SEGMENTATION_IGNORE_VALUE="${SEGMENTATION_IGNORE_VALUE:-}"
 SEGMENTATION_LABEL_OFFSET="${SEGMENTATION_LABEL_OFFSET:-}"
 case "$PROFILE" in
-  dino_imagenet_l11|ijepa_imagenet_l31)
+  dino_imagenet_l*|ijepa_imagenet_l*)
     TASK_ID="imagenet_1k"
     TASK_TYPE="classification"
     TRAIN_TASK_SLUG="imagenet_train"
@@ -145,7 +142,7 @@ case "$PROFILE" in
     TRAIN_MANIFEST="$DATA_ROOT/imagenet/train_manifest.jsonl"
     VAL_MANIFEST="$DATA_ROOT/imagenet/val_manifest.jsonl"
     ;;
-  dino_nyuv2_l11|ijepa_nyuv2_l31)
+  dino_nyuv2_l*|ijepa_nyuv2_l*)
     TASK_ID="nyuv2_depth"
     TASK_TYPE="dense_depth"
     TRAIN_TASK_SLUG="nyuv2_train"
@@ -153,7 +150,7 @@ case "$PROFILE" in
     TRAIN_MANIFEST="$DATA_ROOT/nyuv2/train_manifest.jsonl"
     VAL_MANIFEST="$DATA_ROOT/nyuv2/val_manifest.jsonl"
     ;;
-  dino_ade20k_l11|ijepa_ade20k_l31)
+  dino_ade20k_l*|ijepa_ade20k_l*)
     TASK_ID="ade20k_segmentation"
     TASK_TYPE="dense_segmentation"
     TRAIN_TASK_SLUG="ade20k_train"
@@ -167,7 +164,7 @@ case "$PROFILE" in
     SEGMENTATION_IGNORE_VALUE="${SEGMENTATION_IGNORE_VALUE:-0}"
     SEGMENTATION_LABEL_OFFSET="${SEGMENTATION_LABEL_OFFSET:--1}"
     ;;
-  dino_clevr_count_l11|ijepa_clevr_count_l31)
+  dino_clevr_count_l*|ijepa_clevr_count_l*)
     TASK_ID="clevr_count"
     TASK_TYPE="count_classification"
     TRAIN_TASK_SLUG="clevr_count_train"
@@ -175,23 +172,28 @@ case "$PROFILE" in
     TRAIN_MANIFEST="$DATA_ROOT/clevr_count/train_manifest.jsonl"
     VAL_MANIFEST="$DATA_ROOT/clevr_count/val_manifest.jsonl"
     ;;
+  *)
+    echo "Unsupported profile: $PROFILE" >&2
+    usage >&2
+    exit 2
+    ;;
 esac
 TASK_SLUG="$VAL_TASK_SLUG"
 MANIFEST="$VAL_MANIFEST"
 
-if [[ "$PROFILE" == "dino_imagenet_l11" || "$PROFILE" == "dino_nyuv2_l11" || "$PROFILE" == "dino_ade20k_l11" || "$PROFILE" == "dino_clevr_count_l11" ]]; then
+if [[ "$PROFILE" == dino_*_l* ]]; then
+  LAYER="${PROFILE##*_l}"
   MODEL_ID="dino_v2_base"
-  SAE_ID="dino_l11_topk32_exp4"
-  LAYER="11"
+  SAE_ID="dino_l${LAYER}_topk32_exp4"
   FEATURE_BACKEND="huggingface"
-  TRAIN_FEATURE_DIR="$ARTIFACT_ROOT/features/$MODEL_ID/${TRAIN_TASK_SLUG}_l11"
-  VAL_FEATURE_DIR="$ARTIFACT_ROOT/features/$MODEL_ID/${VAL_TASK_SLUG}_l11"
-elif [[ "$PROFILE" == "ijepa_imagenet_l31" || "$PROFILE" == "ijepa_nyuv2_l31" || "$PROFILE" == "ijepa_ade20k_l31" || "$PROFILE" == "ijepa_clevr_count_l31" ]]; then
+  TRAIN_FEATURE_DIR="$ARTIFACT_ROOT/features/$MODEL_ID/${TRAIN_TASK_SLUG}_l${LAYER}"
+  VAL_FEATURE_DIR="$ARTIFACT_ROOT/features/$MODEL_ID/${VAL_TASK_SLUG}_l${LAYER}"
+elif [[ "$PROFILE" == ijepa_*_l* ]]; then
+  LAYER="${PROFILE##*_l}"
   MODEL_ID="ijepa_vit_h14"
-  SAE_ID="ijepa_l31_topk32_exp4"
-  LAYER="31"
-  TRAIN_FEATURE_DIR="$ARTIFACT_ROOT/features/$MODEL_ID/${TRAIN_TASK_SLUG}_l31"
-  VAL_FEATURE_DIR="$ARTIFACT_ROOT/features/$MODEL_ID/${VAL_TASK_SLUG}_l31"
+  SAE_ID="ijepa_l${LAYER}_topk32_exp4"
+  TRAIN_FEATURE_DIR="$ARTIFACT_ROOT/features/$MODEL_ID/${TRAIN_TASK_SLUG}_l${LAYER}"
+  VAL_FEATURE_DIR="$ARTIFACT_ROOT/features/$MODEL_ID/${VAL_TASK_SLUG}_l${LAYER}"
   if [[ -n "${IJEPA_HF_NAME_OR_PATH:-}" ]]; then
     FEATURE_BACKEND="huggingface"
   else
@@ -201,7 +203,7 @@ elif [[ "$PROFILE" == "ijepa_imagenet_l31" || "$PROFILE" == "ijepa_nyuv2_l31" ||
       usage >&2
       exit 2
     fi
-    IJEPA_TORCHSCRIPT_CHECKPOINT="${IJEPA_TORCHSCRIPT_CHECKPOINT:-/path/to/ijepa_l31_feature_module.pt}"
+    IJEPA_TORCHSCRIPT_CHECKPOINT="${IJEPA_TORCHSCRIPT_CHECKPOINT:-/path/to/ijepa_l${LAYER}_feature_module.pt}"
   fi
 fi
 FEATURE_DIR="$VAL_FEATURE_DIR"

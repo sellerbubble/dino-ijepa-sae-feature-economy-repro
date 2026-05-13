@@ -280,13 +280,25 @@ Goal:
 
 Unify representative-layer, second-last, and optional all-layer diagnostics.
 
-Deliverables:
+Current implementation:
 
-- `configs/sweeps/layer_sweep_paper.yaml`.
-- A runner that dispatches the same Availability/Access/Allocation analyses
-  across configured model layers and SAE checkpoints.
-- Named contrasts for `primary_vs_second_last` and any representative-layer
-  comparison used in the paper.
+- `configs/sweeps/layer_sweep.yaml` defines second-last, representative, and
+  optional all-layer diagnostics.
+- Representative/second-last SAE configs are included for DINO layers
+  `3/7/9/10/11` and I-JEPA layers `8/20/30/31`.
+- `scripts/run_full_profile.sh` accepts dynamic layer profiles such as
+  `dino_nyuv2_l10` and `ijepa_imagenet_l30`, so layer runs reuse the full
+  paper-style launcher instead of separate ad hoc scripts.
+- `plan-runs` emits default layer-sweep feature extraction, SAE-code
+  extraction, and Availability rows under `layer_sweep:second_last` and
+  `layer_sweep:representative`.
+
+Remaining deliverables:
+
+- Add native-geometry/task-conditioned layer diagnostics where needed by
+  Module F.
+- Add explicit named contrast summaries for `primary_vs_second_last` after the
+  native-space ablation module is ported.
 
 Acceptance criteria:
 

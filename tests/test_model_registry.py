@@ -19,7 +19,17 @@ class ModelRegistryTests(unittest.TestCase):
         self.assertEqual(set(registry.models), {"dino_v2_base", "ijepa_vit_h14"})
         self.assertEqual(
             set(registry.saes),
-            {"dino_l11_topk32_exp4", "ijepa_l31_topk32_exp4"},
+            {
+                "dino_l3_topk32_exp4",
+                "dino_l7_topk32_exp4",
+                "dino_l9_topk32_exp4",
+                "dino_l10_topk32_exp4",
+                "dino_l11_topk32_exp4",
+                "ijepa_l8_topk32_exp4",
+                "ijepa_l20_topk32_exp4",
+                "ijepa_l30_topk32_exp4",
+                "ijepa_l31_topk32_exp4",
+            },
         )
         pair = registry.describe_model_sae_pair("dino_v2_base", "dino_l11_topk32_exp4")
         self.assertEqual(pair["layer"], 11)
@@ -46,7 +56,7 @@ class ModelRegistryTests(unittest.TestCase):
         source = PUBLIC_REPRO_ROOT / "configs"
         with tempfile.TemporaryDirectory() as tmpdir:
             tmpdir = Path(tmpdir)
-            for family in ["models", "saes", "tasks", "experiments"]:
+            for family in ["models", "saes", "tasks", "experiments", "sweeps"]:
                 (tmpdir / family).mkdir(parents=True)
                 for path in (source / family).glob("*.yaml"):
                     (tmpdir / family / path.name).write_text(path.read_text(), encoding="utf-8")

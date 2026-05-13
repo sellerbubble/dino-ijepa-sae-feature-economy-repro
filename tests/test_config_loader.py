@@ -17,9 +17,13 @@ PUBLIC_REPRO_ROOT = Path(__file__).resolve().parents[1]
 class ConfigLoaderTests(unittest.TestCase):
     def test_all_example_configs_are_valid(self):
         validated = validate_all_configs(PUBLIC_REPRO_ROOT / "configs")
-        self.assertEqual(len(validated), 17)
+        self.assertEqual(len(validated), 25)
         self.assertIn(
             PUBLIC_REPRO_ROOT / "configs" / "sweeps" / "ranking_control.yaml",
+            validated,
+        )
+        self.assertIn(
+            PUBLIC_REPRO_ROOT / "configs" / "sweeps" / "layer_sweep.yaml",
             validated,
         )
 

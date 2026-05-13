@@ -106,6 +106,7 @@ class PrepareRealArtifactSliceTests(unittest.TestCase):
             "clevr_count_v1_trial": (28, {"clevr_count"}),
             "dino_clevr_count_v1_trial": (14, {"clevr_count"}),
             "ijepa_clevr_count_v1_trial": (14, {"clevr_count"}),
+            "layer_sweep_v1_trial": (27, {"imagenet_1k_val"}),
         }
         for profile, (expected_rows, expected_tasks) in expected.items():
             with self.subTest(profile=profile):

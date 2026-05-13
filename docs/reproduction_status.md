@@ -38,7 +38,7 @@ paper-used intermediate arrays can be inspected if needed.
 | Item | Status |
 | --- | --- |
 | Candidate root | `${PRIVATE_ARTIFACT_ROOT}/public_repro_feature_economy_v1_candidate` |
-| Run-plan completion | `114` planned rows; earlier saved-array audit bundle covers the pre-ranking-control `66/66` slice |
+| Run-plan completion | `141` planned rows; earlier saved-array audit bundle covers the pre-ranking-control `66/66` slice |
 | Artifact index | `190/190` valid records |
 | Generated CSV tables | probe scores, availability, subset usage, and ablation summaries |
 | Metadata sanitizer | PASS, `0` remaining private-path hits |

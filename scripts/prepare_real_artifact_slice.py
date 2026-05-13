@@ -125,6 +125,12 @@ DEFAULT_TRIAL_STAGE_NOTES = {
     "feature_ablation": "Convert combined summary or recompute from public codes/ranking/probe logits.",
 }
 
+BASE_PAPER_EXPERIMENT_IDS = {
+    "paper_v0_native",
+    "paper_v0_sae",
+    "paper_v0_availability",
+}
+
 
 def _trial_profile(
     *,
@@ -133,6 +139,7 @@ def _trial_profile(
     task_ids: set[str],
     sae_ids: set[str],
     stage_notes: dict[str, str] | None = None,
+    experiment_ids: set[str] | None = None,
 ) -> dict[str, Any]:
     notes = dict(DEFAULT_TRIAL_STAGE_NOTES)
     if stage_notes:
@@ -143,7 +150,7 @@ def _trial_profile(
         "task_ids": task_ids,
         "sae_ids": sae_ids,
         "stages": set(),
-        "experiment_ids": set(),
+        "experiment_ids": set(experiment_ids or BASE_PAPER_EXPERIMENT_IDS),
         "stage_status": dict(DEFAULT_TRIAL_STAGE_STATUS),
         "stage_notes": notes,
     }
@@ -223,7 +230,7 @@ PROFILE_FILTERS = {
         sae_ids={"", "ijepa_l31_topk32_exp4"},
     ),
     "full_v1_template": {
-        "description": "Full public v1 114-row saved-array release template.",
+        "description": "Full public v1 saved-array release template, including ranking-control and default layer-sweep rows.",
         "model_ids": set(),
         "task_ids": set(),
         "sae_ids": set(),
@@ -232,6 +239,24 @@ PROFILE_FILTERS = {
         "stage_status": {},
         "stage_notes": {},
     },
+    "layer_sweep_v1_trial": _trial_profile(
+        description="Default layer-sweep diagnostic slice: second-last and representative ImageNet-1K availability rows.",
+        model_ids={"dino_v2_base", "ijepa_vit_h14"},
+        task_ids={"imagenet_1k_val"},
+        sae_ids={
+            "",
+            "dino_l3_topk32_exp4",
+            "dino_l7_topk32_exp4",
+            "dino_l9_topk32_exp4",
+            "dino_l10_topk32_exp4",
+            "dino_l11_topk32_exp4",
+            "ijepa_l8_topk32_exp4",
+            "ijepa_l20_topk32_exp4",
+            "ijepa_l30_topk32_exp4",
+            "ijepa_l31_topk32_exp4",
+        },
+        experiment_ids={"layer_sweep:second_last", "layer_sweep:representative"},
+    ),
 }
 
 

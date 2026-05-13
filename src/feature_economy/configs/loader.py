@@ -232,10 +232,14 @@ def validate_experiment_config(record: Mapping[str, Any]) -> None:
 
 
 def validate_sweep_config(record: Mapping[str, Any]) -> None:
-    _require_keys(record, ["id", "mode", "methods", "outputs"], "sweep_config")
+    _require_keys(record, ["id", "mode", "outputs"], "sweep_config")
     _require_identifier(record["id"], "sweep_config.id")
-    if record["mode"] != "ranking_control":
+    if record["mode"] not in {"ranking_control", "layer_sweep"}:
         raise ConfigError(f"unsupported sweep_config.mode: {record['mode']!r}")
+    if record["mode"] == "layer_sweep":
+        _validate_layer_sweep_config(record)
+        return
+    _require_keys(record, ["methods"], "sweep_config")
     methods = record["methods"]
     if not isinstance(methods, list) or not methods:
         raise ConfigError("sweep_config.methods must be a non-empty list")
@@ -248,6 +252,55 @@ def validate_sweep_config(record: Mapping[str, Any]) -> None:
         _require_type(record["hybrid_alpha"], (int, float), "sweep_config.hybrid_alpha")
         if not 0.0 <= float(record["hybrid_alpha"]) <= 1.0:
             raise ConfigError("sweep_config.hybrid_alpha must be in [0, 1]")
+    _reject_private_paths(record, "sweep_config")
+
+
+def _validate_layer_sweep_config(record: Mapping[str, Any]) -> None:
+    _require_keys(record, ["dataset_split", "groups"], "sweep_config")
+    _require_identifier(record["dataset_split"], "sweep_config.dataset_split")
+    groups = record["groups"]
+    if not isinstance(groups, list) or not groups:
+        raise ConfigError("sweep_config.groups must be a non-empty list")
+    for index, group in enumerate(groups):
+        group_name = f"sweep_config.groups[{index}]"
+        group = _require_mapping(group, group_name)
+        _require_keys(group, ["id", "description", "enabled_in_plan"], group_name)
+        _require_identifier(group["id"], f"{group_name}.id")
+        _require_type(group["enabled_in_plan"], bool, f"{group_name}.enabled_in_plan")
+        if "model_sae_pairs" in group:
+            pairs = group["model_sae_pairs"]
+            if not isinstance(pairs, list):
+                raise ConfigError(f"{group_name}.model_sae_pairs must be a list")
+            for pair_index, pair in enumerate(pairs):
+                pair = _require_mapping(pair, f"{group_name}.model_sae_pairs[{pair_index}]")
+                _require_keys(pair, ["model", "sae"], f"{group_name}.model_sae_pairs[{pair_index}]")
+                _require_identifier(pair["model"], f"{group_name}.model_sae_pairs[{pair_index}].model")
+                _require_identifier(pair["sae"], f"{group_name}.model_sae_pairs[{pair_index}].sae")
+        if "model_layer_ranges" in group:
+            ranges = group["model_layer_ranges"]
+            if not isinstance(ranges, list):
+                raise ConfigError(f"{group_name}.model_layer_ranges must be a list")
+            for range_index, model_range in enumerate(ranges):
+                model_range = _require_mapping(
+                    model_range,
+                    f"{group_name}.model_layer_ranges[{range_index}]",
+                )
+                _require_keys(
+                    model_range,
+                    ["model", "layers"],
+                    f"{group_name}.model_layer_ranges[{range_index}]",
+                )
+                _require_identifier(
+                    model_range["model"],
+                    f"{group_name}.model_layer_ranges[{range_index}].model",
+                )
+                layers = model_range["layers"]
+                if not isinstance(layers, list) or not layers:
+                    raise ConfigError(f"{group_name}.model_layer_ranges[{range_index}].layers must be a non-empty list")
+                for layer in layers:
+                    _require_type(layer, int, f"{group_name}.model_layer_ranges[{range_index}].layers[]")
+    outputs = _require_mapping(record["outputs"], "sweep_config.outputs")
+    _require_keys(outputs, ["root", "features", "codes", "availability"], "sweep_config.outputs")
     _reject_private_paths(record, "sweep_config")
 
 

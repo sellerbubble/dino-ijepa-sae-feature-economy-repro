@@ -41,13 +41,13 @@ PYTHONPATH=src python -m feature_economy.cli.main plan-runs \
   --output-csv /tmp/feature_economy_release_plan/reproduction_run_plan.csv
 ```
 
-The current public v1 configs expand to `114` planned rows:
+The current public v1 configs expand to `141` planned rows:
 
 | Stage | Expected rows |
 | --- | ---: |
-| `availability` | 2 |
-| `feature_extraction` | 8 |
-| `sae_code_extraction` | 8 |
+| `availability` | 11 |
+| `feature_extraction` | 17 |
+| `sae_code_extraction` | 17 |
 | `native_probe` | 8 |
 | `sae_probe` | 8 |
 | `feature_ranking` | 24 |
@@ -102,7 +102,8 @@ Supported staging profiles are:
 | `clevr_count_v1_trial` | 28 | Combined DINO/I-JEPA CLEVR/Count slice. |
 | `dino_clevr_count_v1_trial` | 14 | Single-model DINO/CLEVR/Count slice. |
 | `ijepa_clevr_count_v1_trial` | 14 | Single-model I-JEPA/CLEVR/Count slice. |
-| `full_v1_template` | 114 | Full public v1 saved-array release template. |
+| `layer_sweep_v1_trial` | 27 | Default second-last and representative-layer ImageNet availability slice. |
+| `full_v1_template` | 141 | Full public v1 saved-array release template, including ranking-control and default layer-sweep rows. |
 
 The generated manifest is still a handoff sheet, not proof that the artifact
 slice is ready. Fill `source_artifact_dir` only after inspecting private or
@@ -166,7 +167,7 @@ bash scripts/stage_artifact_bundle_from_manifest.sh \
 This wrapper runs audit, copy, `check-bundle --require-complete`,
 `index-artifacts --require-valid`, `make-tables`, and
 `package_artifact_bundle.sh` in order. Use a subset run plan if you are staging
-a partial release; the full public v1 run plan expects all `114` rows.
+a partial release; the full public v1 run plan expects all `141` rows.
 
 ## Required Artifact Root Layout
 
