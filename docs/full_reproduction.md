@@ -68,7 +68,8 @@ stages: feature extraction -> SAE codes -> SAE probe -> Availability -> Access -
 
 The matched I-JEPA/ImageNet profile exercises the same classification chain.
 The NYUv2 and ADE20K profiles add dense target export and patch-grid alignment,
-covering the public dense-depth and dense-segmentation paths.
+covering the public dense-depth and dense-segmentation paths. The CLEVR/Count
+profiles exercise the image-only count-classification path.
 
 Supported full-profile names:
 
@@ -79,6 +80,8 @@ dino_nyuv2_l11
 ijepa_nyuv2_l31
 dino_ade20k_l11
 ijepa_ade20k_l31
+dino_clevr_count_l11
+ijepa_clevr_count_l31
 ```
 
 Preview the complete command chain without running GPU work:
@@ -143,6 +146,18 @@ export DINO_HF_NAME_OR_PATH=/path/to/facebook/dinov2-base
 export LOCAL_FILES_ONLY=1
 
 bash scripts/run_full_profile.sh dino_ade20k_l11
+```
+
+For CLEVR/Count profiles, provide
+`DATA_ROOT/clevr_count/val_manifest.jsonl` with `image`, `label`, and `split`
+fields. Labels should be produced from official scene annotations as
+`label = len(scene["objects"]) - 3`, matching object counts `3..10`:
+
+```bash
+export DINO_HF_NAME_OR_PATH=/path/to/facebook/dinov2-base
+export LOCAL_FILES_ONLY=1
+
+bash scripts/run_full_profile.sh dino_clevr_count_l11
 ```
 
 This public launcher is intentionally conservative: it adds vertical slices

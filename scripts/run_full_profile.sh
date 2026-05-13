@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Role: launch a full paper-style public reproduction profile.
-# Status: canonical public launcher; supports ImageNet, NYUv2, and ADE20K full-profile slices.
+# Status: canonical public launcher for ImageNet, NYUv2, ADE20K, and CLEVR/Count slices.
 # Used by: docs/full_reproduction.md and remote validation plans.
 # Inputs: DATA_ROOT, SAE_ROOT, ARTIFACT_ROOT, optional DEVICE/BATCH_SIZE/DRY_RUN.
 # Outputs: feature, code, probe, analysis, index, table, figure, and log artifacts.
@@ -66,6 +66,8 @@ Supported profiles:
   ijepa_nyuv2_l31
   dino_ade20k_l11
   ijepa_ade20k_l31
+  dino_clevr_count_l11
+  ijepa_clevr_count_l31
 EOF
 }
 
@@ -79,7 +81,9 @@ if [[ "$PROFILE" != "dino_imagenet_l11" \
   && "$PROFILE" != "dino_nyuv2_l11" \
   && "$PROFILE" != "ijepa_nyuv2_l31" \
   && "$PROFILE" != "dino_ade20k_l11" \
-  && "$PROFILE" != "ijepa_ade20k_l31" ]]; then
+  && "$PROFILE" != "ijepa_ade20k_l31" \
+  && "$PROFILE" != "dino_clevr_count_l11" \
+  && "$PROFILE" != "ijepa_clevr_count_l31" ]]; then
   echo "Unsupported profile: $PROFILE" >&2
   usage >&2
   exit 2
@@ -129,15 +133,21 @@ case "$PROFILE" in
     SEGMENTATION_IGNORE_VALUE="${SEGMENTATION_IGNORE_VALUE:-0}"
     SEGMENTATION_LABEL_OFFSET="${SEGMENTATION_LABEL_OFFSET:--1}"
     ;;
+  dino_clevr_count_l11|ijepa_clevr_count_l31)
+    TASK_ID="clevr_count"
+    TASK_TYPE="count_classification"
+    TASK_SLUG="clevr_count_val"
+    MANIFEST="$DATA_ROOT/clevr_count/val_manifest.jsonl"
+    ;;
 esac
 
-if [[ "$PROFILE" == "dino_imagenet_l11" || "$PROFILE" == "dino_nyuv2_l11" || "$PROFILE" == "dino_ade20k_l11" ]]; then
+if [[ "$PROFILE" == "dino_imagenet_l11" || "$PROFILE" == "dino_nyuv2_l11" || "$PROFILE" == "dino_ade20k_l11" || "$PROFILE" == "dino_clevr_count_l11" ]]; then
   MODEL_ID="dino_v2_base"
   SAE_ID="dino_l11_topk32_exp4"
   LAYER="11"
   FEATURE_BACKEND="huggingface"
   FEATURE_DIR="$ARTIFACT_ROOT/features/$MODEL_ID/${TASK_SLUG}_l11"
-elif [[ "$PROFILE" == "ijepa_imagenet_l31" || "$PROFILE" == "ijepa_nyuv2_l31" || "$PROFILE" == "ijepa_ade20k_l31" ]]; then
+elif [[ "$PROFILE" == "ijepa_imagenet_l31" || "$PROFILE" == "ijepa_nyuv2_l31" || "$PROFILE" == "ijepa_ade20k_l31" || "$PROFILE" == "ijepa_clevr_count_l31" ]]; then
   MODEL_ID="ijepa_vit_h14"
   SAE_ID="ijepa_l31_topk32_exp4"
   LAYER="31"
@@ -341,17 +351,30 @@ if [[ "$TASK_TYPE" == "dense_depth" || "$TASK_TYPE" == "dense_segmentation" ]]; 
   fi
 fi
 
-run python -m feature_economy.cli.main probe-native \
-  --backend linear-probe \
-  --features-npz "$FEATURE_DIR/features.npz" \
-  --manifest "$MANIFEST" \
-  --task-type "$TASK_TYPE" \
-  --task-id "$TASK_ID" \
-  --model-id "$MODEL_ID" \
-  --expected-split "$SPLIT" \
-  --ridge "$RIDGE" \
-  "${probe_target_args[@]}" \
-  --output-dir "$NATIVE_PROBE_DIR"
+if [[ ${#probe_target_args[@]} -gt 0 ]]; then
+  run python -m feature_economy.cli.main probe-native \
+    --backend linear-probe \
+    --features-npz "$FEATURE_DIR/features.npz" \
+    --manifest "$MANIFEST" \
+    --task-type "$TASK_TYPE" \
+    --task-id "$TASK_ID" \
+    --model-id "$MODEL_ID" \
+    --expected-split "$SPLIT" \
+    --ridge "$RIDGE" \
+    "${probe_target_args[@]}" \
+    --output-dir "$NATIVE_PROBE_DIR"
+else
+  run python -m feature_economy.cli.main probe-native \
+    --backend linear-probe \
+    --features-npz "$FEATURE_DIR/features.npz" \
+    --manifest "$MANIFEST" \
+    --task-type "$TASK_TYPE" \
+    --task-id "$TASK_ID" \
+    --model-id "$MODEL_ID" \
+    --expected-split "$SPLIT" \
+    --ridge "$RIDGE" \
+    --output-dir "$NATIVE_PROBE_DIR"
+fi
 
 run python -m feature_economy.cli.main convert-sae-checkpoint \
   --input-checkpoint "$SAE_CHECKPOINT" \
@@ -373,18 +396,32 @@ run python -m feature_economy.cli.main validate-arrays \
   --manifest "$MANIFEST" \
   --expected-split "$SPLIT"
 
-run python -m feature_economy.cli.main probe-sae \
-  --backend linear-probe \
-  --codes-npz "$CODES_DIR/codes.npz" \
-  --manifest "$MANIFEST" \
-  --task-type "$TASK_TYPE" \
-  --task-id "$TASK_ID" \
-  --model-id "$MODEL_ID" \
-  --sae-id "$SAE_ID" \
-  --expected-split "$SPLIT" \
-  --ridge "$RIDGE" \
-  "${probe_target_args[@]}" \
-  --output-dir "$SAE_PROBE_DIR"
+if [[ ${#probe_target_args[@]} -gt 0 ]]; then
+  run python -m feature_economy.cli.main probe-sae \
+    --backend linear-probe \
+    --codes-npz "$CODES_DIR/codes.npz" \
+    --manifest "$MANIFEST" \
+    --task-type "$TASK_TYPE" \
+    --task-id "$TASK_ID" \
+    --model-id "$MODEL_ID" \
+    --sae-id "$SAE_ID" \
+    --expected-split "$SPLIT" \
+    --ridge "$RIDGE" \
+    "${probe_target_args[@]}" \
+    --output-dir "$SAE_PROBE_DIR"
+else
+  run python -m feature_economy.cli.main probe-sae \
+    --backend linear-probe \
+    --codes-npz "$CODES_DIR/codes.npz" \
+    --manifest "$MANIFEST" \
+    --task-type "$TASK_TYPE" \
+    --task-id "$TASK_ID" \
+    --model-id "$MODEL_ID" \
+    --sae-id "$SAE_ID" \
+    --expected-split "$SPLIT" \
+    --ridge "$RIDGE" \
+    --output-dir "$SAE_PROBE_DIR"
+fi
 
 run python -m feature_economy.cli.main compute-usage \
   --config-root "$CONFIG_ROOT" \

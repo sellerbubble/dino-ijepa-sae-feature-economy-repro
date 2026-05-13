@@ -128,6 +128,17 @@ export LOCAL_FILES_ONLY=1
 bash scripts/run_full_profile.sh dino_ade20k_l11
 ```
 
+Finally, CLEVR/Count profiles use image-only labels from official scene
+annotations. Put `image`, `label`, and `split` rows at
+`$DATA_ROOT/clevr_count/val_manifest.jsonl`, where
+`label = len(scene["objects"]) - 3`:
+
+```bash
+export DINO_HF_NAME_OR_PATH=/path/to/facebook/dinov2-base
+export LOCAL_FILES_ONLY=1
+bash scripts/run_full_profile.sh dino_clevr_count_l11
+```
+
 Set paths:
 
 ```bash

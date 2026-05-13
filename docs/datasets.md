@@ -22,6 +22,18 @@ Current manifest contract:
 - NYUv2-style depth: add `depth`.
 - ADE20K-style segmentation: add `segmentation`.
 
+For CLEVR/Count, use the image-only count definition from official scene
+annotations:
+
+```text
+object_count = len(scene["objects"])
+label = object_count - 3
+```
+
+This yields labels `0..7` for object counts `3..10`. Do not derive labels from
+question JSON files; those define a question-conditioned task rather than the
+paper's CLEVR/Count profile.
+
 For dense profiles, `depth` and `segmentation` point to manifest-relative or
 absolute target files. The public `export-targets` command supports `.npy`,
 `.npz`, and image files, then writes a probe-ready `targets.npz` aligned to the
