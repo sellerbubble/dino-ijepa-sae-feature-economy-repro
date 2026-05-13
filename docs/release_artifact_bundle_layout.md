@@ -10,8 +10,8 @@ intermediate arrays.
 The goal is simple: an external reader should be able to unpack an optional
 audit bundle, point `ARTIFACT_ROOT` at it, and run the public validators,
 tables, and figures without knowing any private cluster paths. This audit path
-is separate from the default lightweight rerun path, where users regenerate
-features and SAE codes themselves.
+is separate from the default full paper-style rerun path, where users regenerate
+features, SAE codes, probes, and analysis artifacts themselves.
 
 ## Bundle Root
 

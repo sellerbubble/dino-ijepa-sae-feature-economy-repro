@@ -20,9 +20,9 @@ The public repo should let external readers:
 8. add new models, layers, tasks, SAEs, and analyses without copying private
    workbench scripts.
 
-The current public target is a lightweight executable rerun chain with optional
-saved-array audit support. It is not intended to be an exact private
-paper-scale training reproduction.
+The current public target is a full paper-style rerun chain with smoke tests for
+code health and optional saved-array audit support. It is not intended to
+redistribute private data, checkpoints, or one-off private cluster launchers.
 The intended public v1 boundary is fixed in `docs/public_v1_scope.md`.
 
 ## Prompt-To-Artifact Checklist
@@ -61,14 +61,15 @@ The intended public v1 boundary is fixed in `docs/public_v1_scope.md`.
 | Artifact provenance | `index-artifacts`, `run_manifest.json`, schema validators, `current_git_commit()` | Smoke indexes each artifact family with `--require-valid`; array validation reports are valid index records; run manifests record the current git commit or `FEATURE_ECONOMY_GIT_COMMIT` override. | Falls back to `"unknown"` only when no git metadata or override is available. |
 | Tables | `make-tables`, `paper/tables.py` | Smoke exports probe, availability, subset usage, and ablation CSV tables. | Final manuscript formatting is separate from reproducibility CSV export. |
 | Figures | `make-figures`, `paper/figures.py` | Smoke exports overview figures when matplotlib is installed. | Final designed paper figures are not included. |
-| Quickstart path | `docs/release_quickstart.md` | Provides a 5-minute smoke path, a compact real lightweight vertical slice, and an optional audit-bundle path. | Still points to the full runbook for multi-task/multi-model runs. |
+| Full reproduction guide | `docs/full_reproduction.md` | Defines the default full paper-style rerun path, required inputs, outputs, resource expectations, and acceptance checks. | Paper-style runners still need to be ported and validated module by module. |
+| Quickstart path | `docs/release_quickstart.md` | Provides a 5-minute smoke path, a compact full vertical slice template, and an optional audit-bundle path. | Still points to the full runbook for multi-task/multi-model runs. |
 | Extension path | `docs/extending_models_tasks.md`, config directories, TorchScript export guide | Docs describe adding models, SAEs, tasks, and analyses through configs/adapters. | Needs more examples once a second real model/layer/task is added publicly. |
 
 ## Release Verdict
 
-Current status: **public alpha is executable for a lightweight rerun chain, and
-the first full public v1 saved-array release candidate is available as an
-optional audit artifact**.
+Current status: **public alpha has executable command surfaces and smoke tests;
+the default target is now full paper-style rerun, while the first full public v1
+saved-array release candidate remains an optional audit artifact**.
 
 It is suitable for:
 
@@ -82,7 +83,7 @@ It is not yet suitable for claiming:
 
 - bit-identical reproduction of private paper-scale intermediate arrays;
 - official raw I-JEPA checkpoint loading;
-- private training-loop equivalence;
+- equivalence to every private training-loop launcher;
 - final manuscript figure reproduction.
 
 ## Highest-Value Next Actions

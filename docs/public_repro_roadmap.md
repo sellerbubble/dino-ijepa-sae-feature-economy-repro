@@ -7,9 +7,9 @@ skeleton to an executable reproduction repo for the DINO/I-JEPA SAE Feature
 Economy paper chain.
 
 The current release boundary is defined in `docs/public_v1_scope.md`: public v1
-is a lightweight executable rerun repo with optional saved-array audit support.
-Exact private paper-scale training loops are future extensions unless they
-satisfy the escalation rule in that scope document.
+is a full paper-style rerun repo with smoke tests for code health and optional
+saved-array audit support. Private one-off cluster launchers remain out of
+scope unless they can be converted into portable public runners.
 
 ## End State
 

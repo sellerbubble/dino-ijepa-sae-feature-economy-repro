@@ -287,7 +287,7 @@ The artifact bundle `README.md` should include:
 - commands to verify checksum, unpack, run `check-bundle`, index artifacts, and
   regenerate tables;
 - known caveats, especially that this is an optional saved-array audit bundle
-  rather than the default lightweight rerun path.
+  rather than the default full paper-style rerun path.
 
 Generate the initial README with:
 

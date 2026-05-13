@@ -7,15 +7,16 @@ DINO/I-JEPA SAE Feature Economy reproduction repo.
 
 ## Release Position
 
-Public v1 is a **lightweight executable reproduction repo** for the paper's main
-evidence chain. It is designed to let external readers prepare datasets and
-checkpoints, generate their own features and SAE codes, run the Feature Economy
-analyses, and compare the resulting patterns against documented expected
-results.
+Public v1 is a **full paper-style rerun repository** for the paper's main
+evidence chain. It is designed to let external readers prepare datasets, model
+checkpoints, SAE checkpoints, and GPU resources, then rerun the pipeline from
+feature extraction through probes, feature-economy analyses, and paper-style
+tables.
 
-It is not intended to be a full private-cluster recreation of every paper-scale
-training loop. Large saved-array bundles may be published as optional audit
-artifacts, but they are not the default reproduction path.
+It is not intended to redistribute private data, checkpoints, or every private
+cluster launcher. Smoke tests remain code-health checks. Large saved-array
+bundles may be published as optional audit artifacts, but they are not the
+default reproduction path.
 
 ## What Public V1 Must Support
 
@@ -25,8 +26,8 @@ Public v1 should support the following chain:
 configs and manifests
   -> image/manifest validation
   -> native feature extraction
-  -> lightweight SAE code extraction
-  -> native and SAE-code linear probes
+  -> SAE code extraction
+  -> native and SAE-code probes using paper-style settings when available
   -> Availability, Access, and Allocation analyses
   -> artifact indexing
   -> CSV tables and overview figures
@@ -53,7 +54,8 @@ Public v1 does not claim:
 
 - bit-identical reproduction of private paper-scale feature caches;
 - an official raw I-JEPA checkpoint loader;
-- equivalence to private probe-training loops;
+- equivalence to every private probe-training launcher until public paper-style
+  runners are ported and validated;
 - final manuscript figure reproduction;
 - redistribution of datasets, model weights, or SAE checkpoints;
 - support for every private artifact variant produced during research;
@@ -66,6 +68,8 @@ first public repo executable, auditable, and portable.
 
 A public v1 checkout should provide these gates:
 
+- `docs/full_reproduction.md`: default full paper-style rerun path.
+- `docs/remote_safety.md`: non-destructive remote sync and artifact rules.
 - `scripts/reproduce_smoke.sh`: one-command checkpoint-free smoke validation.
 - `scripts/build_tiny_artifact_bundle.sh`: one complete tiny vertical slice
   whose final `check-bundle --require-complete` passes.
@@ -88,22 +92,24 @@ A public v1 checkout should provide these gates:
 If a contribution changes the public reproduction chain, it should either update
 these gates or explain why the new component is intentionally outside public v1.
 
-## Exact Trainer Escalation Rule
+## Paper-Style Runner Rule
 
-Do not add a paper-scale torch probe trainer to public v1 merely to reduce a
-wording caveat. Add it only if all of the following are true:
+Public paper-style runners should be added when the corresponding private
+experiment path is understood well enough to expose it without private paths or
+one-off assumptions. A runner is ready for public v1 only if all of the
+following are true:
 
 - the required training hyperparameters are frozen and documented;
 - expected input arrays, target arrays, and output artifacts remain compatible
   with the current contracts;
-- the trainer has a tiny fixture/smoke mode;
-- the trainer can run without private cluster paths;
+- the runner has a tiny fixture, dry-run, or config-validation mode;
+- the runner can run without private cluster paths;
 - the added dependency burden is acceptable for external users;
-- the README and roadmap clearly distinguish lightweight and paper-scale modes.
+- the README and roadmap clearly distinguish full rerun, smoke, and audit modes.
 
-Until those conditions are met, public v1 should treat paper-scale probe
-training as a future extension and keep the reproducible path centered on
-regenerating features/codes plus lightweight probes.
+Until those conditions are met for a module, public v1 should expose the closest
+validated artifact contract and clearly mark the module as not yet paper-style
+complete.
 
 ## Extension Rule
 

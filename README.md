@@ -4,11 +4,11 @@ This directory is the curated public reproduction slice for the DINO/I-JEPA SAE
 Feature Economy project.
 
 Status: active public reproduction slice. It includes configs, artifact schemas,
-tiny validation tests, fixture runners, feature/code extraction interfaces,
-lightweight probe and AAA analysis commands, artifact indexing, and table
+tiny validation tests, fixture runners, full paper-style feature/code extraction
+interfaces, probe and AAA analysis commands, artifact indexing, and table
 export. Optional overview figure export is available with the `figures` extra.
-It does not ship datasets, checkpoints, paper-scale feature caches, SAE codes,
-or final designed paper figures by default.
+It does not redistribute datasets, model checkpoints, SAE checkpoints, or final
+designed paper figures.
 
 ## Goal
 
@@ -53,22 +53,22 @@ than by copying experiment scripts.
   default.
 - Raw official I-JEPA checkpoint loading. Exported I-JEPA feature modules can
   use the TorchScript backend.
-- Exact private paper-scale training loops.
+- Private cluster-specific launchers and local absolute paths.
 - Final designed paper figures.
 - Private cluster launchers or local artifact paths.
 
 Use `docs/reproduction_status.md` for current coverage and known gaps.
-Use `docs/public_v1_scope.md` for the release boundary: public v1 is a
-lightweight executable rerun repo with optional saved-array audit support, not a
-private-cluster training-loop dump.
+Use `docs/public_v1_scope.md` for the release boundary: public v1 is a full
+paper-style rerun repo with smoke tests for code health and optional saved-array
+audit support, not a private-cluster training-loop dump.
 
 ## Main Reproduction Path
 
-Start with `docs/release_quickstart.md` for the 5-minute smoke path, then run a
-real vertical slice from your own prepared manifests, model features, SAE
-checkpoints, and task targets. The default expected outcome is approximate
-scientific agreement with the paper, not bit-identical reproduction of private
-intermediate arrays.
+Start with `docs/full_reproduction.md` for the default full paper-style rerun
+path from prepared datasets, model checkpoints, SAE checkpoints, and GPU
+resources. Use `docs/release_quickstart.md` for the short command path and smoke
+checks. The expected outcome is approximate scientific agreement with the paper,
+not bit-identical reproduction of private intermediate arrays.
 
 For expected metric ranges and qualitative acceptance checks, see
 `docs/expected_results.md`.
@@ -79,6 +79,9 @@ but ordinary users do not need it to rerun the experiments.
 
 For the complete step-by-step paper-chain template, see
 `docs/canonical_chain_runbook.md`.
+
+For remote-server safety rules and non-destructive sync/output conventions, see
+`docs/remote_safety.md`.
 
 For the expected layout of public saved-array release assets, see
 `docs/release_artifact_bundle_layout.md`.

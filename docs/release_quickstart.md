@@ -1,8 +1,9 @@
 # Release Quickstart
 
 This is the shortest path for checking that the public reproduction repo works
-and for running a real lightweight reproduction slice from user-provided data,
-checkpoints, and SAE checkpoints. For the complete command reference, see
+and for starting a full paper-style rerun from user-provided data, model
+checkpoints, SAE checkpoints, and GPU resources. For the complete default path,
+see `docs/full_reproduction.md`; for command details, see
 `docs/canonical_chain_runbook.md`.
 
 ## 1. Five-Minute Smoke Check
@@ -49,12 +50,12 @@ This builds one DINO/ImageNet SAE slice from tiny fixture arrays, then verifies:
 The tiny bundle is still not a scientific result. It is the smallest executable
 example of the public v1 artifact contract.
 
-## 3. Real Lightweight Vertical Slice
+## 3. Full Paper-Style Vertical Slice
 
 The default public path regenerates intermediate arrays locally instead of
 requiring a paper-scale feature-cache download. To reproduce the scientific
 chain, provide real manifests, model checkpoints or exported feature modules,
-SAE checkpoints, and dense targets when needed.
+SAE checkpoints, GPU resources, and dense targets when needed.
 
 For expected score ranges and qualitative checks, see `docs/expected_results.md`.
 

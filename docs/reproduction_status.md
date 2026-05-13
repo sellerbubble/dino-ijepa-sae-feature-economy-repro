@@ -5,11 +5,11 @@ Date: 2026-05-13
 This document separates what is executable now from the remaining gaps toward a
 full paper-scale public reproduction.
 
-Public v1 is scoped as a lightweight executable rerun repo with optional
-saved-array audit support. See `docs/public_v1_scope.md` for what belongs in v1
-and what should remain a future extension. As of 2026-05-13, the public command
-surface, smoke tests, tiny complete bundle, and optional saved-array audit
-bundle are available.
+Public v1 is scoped as a full paper-style rerun repo with smoke tests for code
+health and optional saved-array audit support. See `docs/public_v1_scope.md` for
+what belongs in v1 and what should remain a future extension. As of 2026-05-13,
+the public command surface, smoke tests, tiny complete bundle, and optional
+saved-array audit bundle are available.
 
 ## Current Executable Smoke Chain
 
@@ -46,7 +46,7 @@ paper-used intermediate arrays can be inspected if needed.
 | Release split parts | 15 parts: `part-00` ... `part-13` at 512 MiB and `part-14` at approximately 361 MiB |
 | Reassembly check | PASS, concatenated parts match archive SHA256 |
 
-Default users should instead regenerate these files with the commands in
+Default users should regenerate these files with the commands in
 `docs/release_quickstart.md` and compare against `docs/expected_results.md`.
 
 ## Commands
@@ -117,7 +117,8 @@ OUTPUT_ROOT=/tmp/feature_economy_tiny_bundle bash scripts/build_tiny_artifact_bu
 This should end with `check-bundle --require-complete` passing for the tiny
 DINO/ImageNet SAE slice.
 
-For real lightweight reproduction, follow `docs/canonical_chain_runbook.md`.
+For real full paper-style reproduction, follow `docs/full_reproduction.md` and
+`docs/canonical_chain_runbook.md`.
 
 Individual commands:
 
