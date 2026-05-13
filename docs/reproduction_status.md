@@ -38,7 +38,7 @@ paper-used intermediate arrays can be inspected if needed.
 | Item | Status |
 | --- | --- |
 | Candidate root | `${PRIVATE_ARTIFACT_ROOT}/public_repro_feature_economy_v1_candidate` |
-| Run-plan completion | `141` planned rows; earlier saved-array audit bundle covers the pre-ranking-control `66/66` slice |
+| Run-plan completion | `149` planned rows; earlier saved-array audit bundle covers the pre-ranking-control `66/66` slice |
 | Artifact index | `190/190` valid records |
 | Generated CSV tables | probe scores, availability, subset usage, and ablation summaries |
 | Metadata sanitizer | PASS, `0` remaining private-path hits |
@@ -85,7 +85,8 @@ Default users should regenerate these files with the commands in
 | SAE-code probes | Fixture evaluation, lightweight linear probes, and public `paper-scale-torch` probes implemented for classification/counting/depth/segmentation saved arrays. | Use `paper-scale-torch` for full paper-style reruns; dense outputs include compatibility proxies for ranking/ablation readers. |
 | Availability | Fired-count availability from saved `codes.npz` implemented. | Add usage-rate mode for dense spatial analyses if needed. |
 | Access | Probe-weight, validation-contribution, and hybrid ranking plus fired-count bucket-matched random subset usage from saved SAE codes implemented. | Add dense usage-rate mode if needed for per-pixel task-specific streams. |
-| Allocation | SAE feature zero-ablation with matched random control implemented for classification/counting/depth/segmentation saved arrays, now run across `probe_weight`, `validation_contribution`, and `hybrid` ranking controls in full profiles. | Module F native-space ablation remains a later advanced module. |
+| Allocation | SAE feature zero-ablation with matched random control implemented for classification/counting/depth/segmentation saved arrays, now run across `probe_weight`, `validation_contribution`, and `hybrid` ranking controls in full profiles. | Perturbation-response analysis remains outside public v1. |
+| Module F native-space ablation | Saved-array native subspace removal implemented through `ablate-native-subspace` and `configs/advanced/module_f_native_ablation_nyuv2.yaml`. | Requires lightweight SAE checkpoints with `decoder_weight`; command records SAE runtime-normalized coordinate metadata. |
 | Paper tables | Probe, availability, access/subset, and allocation CSV tables from indexed artifacts. | Add final paper formatting once real artifacts exist. |
 | Paper figures | Lightweight overview figures from public CSV tables implemented. | Add final designed paper figure scripts if exact manuscript visuals are required. |
 | Task metrics | Implemented and unit-tested for classification, depth, segmentation, and counting-style accuracy. | Add paper-specific metric variants only if needed. |

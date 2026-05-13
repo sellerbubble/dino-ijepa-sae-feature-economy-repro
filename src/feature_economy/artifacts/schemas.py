@@ -550,6 +550,92 @@ def validate_ablation_summary(record: Mapping[str, Any]) -> None:
     if record["record_type"] != "feature_ablation_summary":
         raise SchemaError("ablation_summary.record_type must be feature_ablation_summary")
     _require_mapping(record["baseline_metrics"], "ablation_summary.baseline_metrics")
+
+
+def validate_native_subspace_ablation_summary(record: Mapping[str, Any]) -> None:
+    """Validate Module F native-subspace ablation summaries."""
+
+    record = _require_mapping(record, "native_subspace_ablation_summary")
+    _require_keys(
+        record,
+        [
+            "record_type",
+            "task_id",
+            "model_id",
+            "sae_id",
+            "task_type",
+            "baseline_metrics",
+            "projection_coordinate_system",
+            "ablations",
+            "random_controls",
+            "delta_convention",
+        ],
+        "native_subspace_ablation_summary",
+    )
+    if record["record_type"] != "native_subspace_ablation_summary":
+        raise SchemaError(
+            "native_subspace_ablation_summary.record_type must be native_subspace_ablation_summary"
+        )
+    if record["task_type"] not in {
+        "classification",
+        "count_classification",
+        "dense_depth",
+        "dense_segmentation",
+    }:
+        raise SchemaError("native_subspace_ablation_summary.task_type is unsupported")
+    _require_mapping(
+        record["baseline_metrics"],
+        "native_subspace_ablation_summary.baseline_metrics",
+    )
+    coordinate = _require_mapping(
+        record["projection_coordinate_system"],
+        "native_subspace_ablation_summary.projection_coordinate_system",
+    )
+    _require_keys(
+        coordinate,
+        ["space", "normalize_activations", "center"],
+        "native_subspace_ablation_summary.projection_coordinate_system",
+    )
+    if coordinate["normalize_activations"] not in {"none", "layer_norm"}:
+        raise SchemaError("native_subspace_ablation_summary normalize_activations unsupported")
+    for key in ["ablations", "random_controls"]:
+        rows = record[key]
+        if not isinstance(rows, list) or not rows:
+            raise SchemaError(f"native_subspace_ablation_summary.{key} must be a non-empty list")
+        for index, row in enumerate(rows):
+            row = _require_mapping(row, f"native_subspace_ablation_summary.{key}[{index}]")
+            _require_keys(
+                row,
+                ["subset", "num_features", "feature_ids", "metrics", "metric_delta", "geometry"],
+                f"native_subspace_ablation_summary.{key}[{index}]",
+            )
+            if not isinstance(row["num_features"], int) or row["num_features"] <= 0:
+                raise SchemaError(
+                    f"native_subspace_ablation_summary.{key}[{index}].num_features must be positive"
+                )
+            if not isinstance(row["feature_ids"], list):
+                raise SchemaError(
+                    f"native_subspace_ablation_summary.{key}[{index}].feature_ids must be a list"
+                )
+            _require_mapping(row["metrics"], f"native_subspace_ablation_summary.{key}[{index}].metrics")
+            _require_mapping(
+                row["metric_delta"],
+                f"native_subspace_ablation_summary.{key}[{index}].metric_delta",
+            )
+            geometry = _require_mapping(
+                row["geometry"],
+                f"native_subspace_ablation_summary.{key}[{index}].geometry",
+            )
+            _require_keys(
+                geometry,
+                [
+                    "subspace_rank",
+                    "mean_pairwise_cosine",
+                    "mean_abs_pairwise_cosine",
+                    "native_variance_share",
+                ],
+                f"native_subspace_ablation_summary.{key}[{index}].geometry",
+            )
     if not isinstance(record["ablations"], list) or not record["ablations"]:
         raise SchemaError("ablation_summary.ablations must be a non-empty list")
     if not isinstance(record["random_controls"], list):

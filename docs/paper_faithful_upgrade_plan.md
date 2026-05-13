@@ -315,16 +315,31 @@ module.
 
 Deliverables:
 
-- `configs/advanced/module_f_native_ablation_nyuv2.yaml`.
-- Native subspace ablation runner.
-- Documentation of the corrected intervention coordinate and random-control
-  exclusion policy.
+Current implementation:
+
+- `configs/advanced/module_f_native_ablation_nyuv2.yaml` defines final-layer
+  and second-last NYUv2 native-subspace ablation rows for DINO and I-JEPA.
+- `feature-economy ablate-native-subspace` consumes saved native
+  `features.npz`, a lightweight SAE checkpoint with `decoder_weight`, task
+  ranking JSON, and SAE probe logits/weights.
+- The command removes selected SAE decoder-direction subspaces in SAE
+  runtime-normalized hidden coordinates centered by `decoder_bias`, then
+  re-encodes through the frozen SAE and evaluates the frozen SAE-code probe.
+- The run plan now includes `native_subspace_ablation` rows for Module F.
+- `docs/canonical_chain_runbook.md` includes a concrete Module F command and
+  the expected `configs/advanced/` matrix.
+- `docs/checkpoints.md` documents the additional `decoder_weight` requirement.
+
+Remaining deliverables:
+
+- Decide later whether ADE20K native-space bridge should become a future
+  advanced config. It is intentionally not part of public v1.
 
 Acceptance criteria:
 
 - The runner refuses unsupported SAE normalization modes unless implemented.
 - Summary records the coordinate system, normalization mode, selected feature
-  source, random pool policy, and target probe checkpoint.
+  source, random pool policy, and target probe artifacts.
 - DINO and I-JEPA interpretation caveats are documented.
 
 ### Phase 8: Complete Agent Documentation And CI Gates

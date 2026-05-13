@@ -57,6 +57,7 @@ def validate_all_configs(config_root: str | Path) -> list[Path]:
         "probes": validate_probe_config,
         "experiments": validate_experiment_config,
         "sweeps": validate_sweep_config,
+        "advanced": validate_advanced_config,
     }
     validated: list[Path] = []
     for path in sorted(config_root.rglob("*.yaml")):
@@ -253,6 +254,43 @@ def validate_sweep_config(record: Mapping[str, Any]) -> None:
         if not 0.0 <= float(record["hybrid_alpha"]) <= 1.0:
             raise ConfigError("sweep_config.hybrid_alpha must be in [0, 1]")
     _reject_private_paths(record, "sweep_config")
+
+
+def validate_advanced_config(record: Mapping[str, Any]) -> None:
+    _require_keys(record, ["id", "mode", "task_id", "runs", "outputs"], "advanced_config")
+    _require_identifier(record["id"], "advanced_config.id")
+    if record["mode"] != "native_subspace_ablation":
+        raise ConfigError(f"unsupported advanced_config.mode: {record['mode']!r}")
+    _require_identifier(record["task_id"], "advanced_config.task_id")
+    runs = record["runs"]
+    if not isinstance(runs, list) or not runs:
+        raise ConfigError("advanced_config.runs must be a non-empty list")
+    for index, run in enumerate(runs):
+        run_name = f"advanced_config.runs[{index}]"
+        run = _require_mapping(run, run_name)
+        _require_keys(
+            run,
+            ["id", "model", "sae", "ranking_source", "top_ks", "random_pool"],
+            run_name,
+        )
+        _require_identifier(run["id"], f"{run_name}.id")
+        _require_identifier(run["model"], f"{run_name}.model")
+        _require_identifier(run["sae"], f"{run_name}.sae")
+        _require_identifier(run["ranking_source"], f"{run_name}.ranking_source")
+        top_ks = run["top_ks"]
+        if not isinstance(top_ks, list) or not top_ks:
+            raise ConfigError(f"{run_name}.top_ks must be a non-empty list")
+        for top_k in top_ks:
+            _require_type(top_k, int, f"{run_name}.top_ks[]")
+            if top_k <= 0:
+                raise ConfigError(f"{run_name}.top_ks entries must be positive")
+        if run["random_pool"] not in {"dictionary", "exclude_topk"}:
+            raise ConfigError(f"{run_name}.random_pool is unsupported")
+        if "normalize_activations" in run and run["normalize_activations"] not in {"none", "layer_norm"}:
+            raise ConfigError(f"{run_name}.normalize_activations is unsupported")
+    outputs = _require_mapping(record["outputs"], "advanced_config.outputs")
+    _require_keys(outputs, ["root", "summary"], "advanced_config.outputs")
+    _reject_private_paths(record, "advanced_config")
 
 
 def _validate_layer_sweep_config(record: Mapping[str, Any]) -> None:

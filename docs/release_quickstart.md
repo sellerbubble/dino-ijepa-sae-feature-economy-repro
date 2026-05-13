@@ -392,7 +392,7 @@ python -m feature_economy.cli.main make-tables \
 Expected current audit-bundle status:
 
 - `66/66` pre-ranking-control run-plan rows complete in the existing audit bundle;
-- regenerate the run plan for the current `141`-row ranking-control and layer-sweep-expanded layout;
+- regenerate the run plan for the current `149`-row ranking-control, layer-sweep, and Module F-expanded layout;
 - `190/190` indexed artifacts valid;
 - generated tables for probe scores, Availability, Access, and Allocation.
 

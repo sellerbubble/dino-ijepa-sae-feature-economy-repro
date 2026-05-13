@@ -15,7 +15,8 @@ The canonical chain is split into:
 4. Extract SAE codes.
 5. Run native and SAE-code probes.
 6. Compute Availability, Access, and Allocation artifacts.
-7. Index artifacts and export paper-facing tables and overview figures.
+7. Run optional advanced Module F native-subspace ablation.
+8. Index artifacts and export paper-facing tables and overview figures.
 
 The release boundary for this full paper-style rerun path is documented in
 `docs/public_v1_scope.md`. The optional saved-array audit bundle follows the
@@ -371,7 +372,37 @@ Use the same command shape for `count_classification`, `dense_depth`, and
 `dense_segmentation`; only `--task-type` changes because probe targets/classes
 are already stored in `probe_logits.npz`.
 
-## Step 9: Index Artifacts
+## Step 9: Advanced Module F Native-Subspace Ablation
+
+Module F asks whether task-selected SAE directions leave a corresponding
+footprint in native hidden space. The public advanced command consumes saved
+native features, a lightweight SAE checkpoint that includes `decoder_weight`, a
+task ranking, and the frozen SAE-code probe logits. Projection removal is done
+in the SAE runtime-normalized coordinate centered by `decoder_bias`; for current
+paper SAEs this is `layer_norm(x) - decoder_bias`.
+
+```bash
+python -m feature_economy.cli.main ablate-native-subspace \
+  --config-root configs \
+  --features-npz "$ARTIFACT_ROOT/features/dino_v2_base/nyuv2_depth/l11/features.npz" \
+  --sae-checkpoint "$ARTIFACT_ROOT/checkpoints/dino_l11_topk32_exp4_lightweight.npz" \
+  --probe-logits-npz "$ARTIFACT_ROOT/probes/sae/dino_l11_topk32_exp4/nyuv2_depth/val/probe_logits.npz" \
+  --ranking-json "$ARTIFACT_ROOT/analysis/ranking_controls/dino_l11_topk32_exp4/nyuv2_val/hybrid/ranking/task_feature_ranking.json" \
+  --task-type dense_depth \
+  --top-k 20 \
+  --random-pool exclude_topk \
+  --normalize-activations layer_norm \
+  --sae-topk 32 \
+  --output-dir "$ARTIFACT_ROOT/analysis/native_subspace_ablation/module_f_native_ablation_nyuv2/dino_l11_final/top_20"
+```
+
+The configured advanced matrix lives in
+`configs/advanced/module_f_native_ablation_nyuv2.yaml` and covers DINO L11,
+I-JEPA L31, DINO L10 second-last, and I-JEPA L30 second-last at top-20 and
+top-100. This module intentionally excludes NYUv2 perturbation-response analysis;
+that qualitative/functional support remains outside the public v1 default chain.
+
+## Step 10: Index Artifacts
 
 Index each artifact family before building tables:
 
@@ -389,7 +420,7 @@ python -m feature_economy.cli.main index-artifacts \
   --require-valid
 ```
 
-## Step 10: Export Tables
+## Step 11: Export Tables
 
 ```bash
 python -m feature_economy.cli.main make-tables \
@@ -408,7 +439,7 @@ Current table outputs:
 - `subset_usage_summary.csv`
 - `ablation_summary.csv`
 
-## Step 11: Export Overview Figures
+## Step 12: Export Overview Figures
 
 Install the optional figure dependency first:
 

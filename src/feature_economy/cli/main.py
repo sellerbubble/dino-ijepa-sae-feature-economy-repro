@@ -342,6 +342,39 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Write deterministic smoke ablation artifacts.",
     )
+    native_ablation = subparsers.add_parser(
+        "ablate-native-subspace",
+        help="Run Module F native hidden-state subspace ablation over saved arrays.",
+    )
+    native_ablation.add_argument("--config-root", type=Path, required=True)
+    native_ablation.add_argument("--features-npz", type=Path, required=True)
+    native_ablation.add_argument("--sae-checkpoint", type=Path, required=True)
+    native_ablation.add_argument("--probe-logits-npz", type=Path, required=True)
+    native_ablation.add_argument("--ranking-json", type=Path, required=True)
+    native_ablation.add_argument("--output-dir", type=Path, required=True)
+    native_ablation.add_argument(
+        "--task-type",
+        required=True,
+        choices=[
+            "classification",
+            "count_classification",
+            "dense_depth",
+            "dense_segmentation",
+        ],
+    )
+    native_ablation.add_argument("--top-k", type=int, default=20)
+    native_ablation.add_argument("--random-seed", type=int, default=0)
+    native_ablation.add_argument(
+        "--random-pool",
+        choices=["dictionary", "exclude_topk"],
+        default="exclude_topk",
+    )
+    native_ablation.add_argument(
+        "--normalize-activations",
+        choices=["none", "layer_norm"],
+        default="layer_norm",
+    )
+    native_ablation.add_argument("--sae-topk", type=int, default=32)
     eval_native_fixture = subparsers.add_parser(
         "eval-native-fixture",
         help="Evaluate precomputed fixture predictions as a native probe summary.",
@@ -1041,6 +1074,24 @@ def main() -> int:
             random_seed=args.random_seed,
         )
         print(f"Wrote feature ablation summary to {summary_path}")
+        return 0
+    if args.command == "ablate-native-subspace":
+        from feature_economy.analysis import ablate_native_subspace
+
+        summary_path = ablate_native_subspace(
+            features_npz=args.features_npz,
+            sae_checkpoint=args.sae_checkpoint,
+            probe_logits_npz=args.probe_logits_npz,
+            ranking_json=args.ranking_json,
+            task_type=args.task_type,
+            output_dir=args.output_dir,
+            top_k=args.top_k,
+            random_seed=args.random_seed,
+            random_pool=args.random_pool,
+            normalize_activations=args.normalize_activations,
+            topk=args.sae_topk,
+        )
+        print(f"Wrote native subspace ablation summary to {summary_path}")
         return 0
     if args.command == "eval-native-fixture":
         from feature_economy.probes import evaluate_native_fixture

@@ -1,0 +1,40 @@
+id: module_f_native_ablation_nyuv2
+mode: native_subspace_ablation
+task_id: nyuv2_depth
+description: Module F native-space control for NYUv2 depth.
+runs:
+  - id: dino_l11_final
+    model: dino_v2_base
+    sae: dino_l11_topk32_exp4
+    ranking_source: hybrid
+    top_ks: [20, 100]
+    random_pool: exclude_topk
+    normalize_activations: layer_norm
+  - id: ijepa_l31_final
+    model: ijepa_vit_h14
+    sae: ijepa_l31_topk32_exp4
+    ranking_source: hybrid
+    top_ks: [20, 100]
+    random_pool: exclude_topk
+    normalize_activations: layer_norm
+  - id: dino_l10_second_last
+    model: dino_v2_base
+    sae: dino_l10_topk32_exp4
+    ranking_source: hybrid
+    top_ks: [20, 100]
+    random_pool: exclude_topk
+    normalize_activations: layer_norm
+  - id: ijepa_l30_second_last
+    model: ijepa_vit_h14
+    sae: ijepa_l30_topk32_exp4
+    ranking_source: hybrid
+    top_ks: [20, 100]
+    random_pool: exclude_topk
+    normalize_activations: layer_norm
+outputs:
+  root: ${ARTIFACT_ROOT}/analysis/native_subspace_ablation/module_f_nyuv2/{run_id}
+  summary: native_subspace_ablation_summary.json
+notes:
+  - Projection removal is performed in SAE runtime-normalized hidden coordinates centered by decoder_bias.
+  - Current public command consumes saved native features, a lightweight SAE checkpoint with decoder_weight, ranking JSON, and SAE probe logits.
+  - This module intentionally excludes NYUv2 perturbation-response analysis.

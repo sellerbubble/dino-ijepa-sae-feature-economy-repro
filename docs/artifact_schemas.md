@@ -20,6 +20,7 @@ Core record types:
 - `task_feature_ranking`
 - `contribution_scores_summary`
 - `feature_ablation_summary`
+- `native_subspace_ablation_summary`
 - `array_contract_validation`
 - `artifact_index`
 - `reproduction_run_plan`
@@ -63,3 +64,10 @@ checks whether each planned artifact directory contains the files required by
 that stage, such as `features.npz`, `codes.npz`, `probe_logits.npz`,
 `task_feature_ranking.json`, `contribution_scores.npz`, or
 `feature_ablation_summary.json`.
+
+`native_subspace_ablation_summary` is the Module F advanced-analysis record. It
+stores baseline SAE-probe metrics, top-k native-subspace intervention metrics,
+matched-random native-subspace controls, geometry diagnostics, and an explicit
+`projection_coordinate_system` block. The public paper-style setting should
+record `space: sae_runtime_normalized_hidden_minus_decoder_bias` and
+`normalize_activations: layer_norm` for current DINO/I-JEPA SAEs.

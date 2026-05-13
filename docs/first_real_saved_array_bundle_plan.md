@@ -41,7 +41,7 @@ PYTHONPATH=src python -m feature_economy.cli.main plan-runs \
   --output-csv /tmp/feature_economy_release_plan/reproduction_run_plan.csv
 ```
 
-The current public v1 configs expand to `141` planned rows:
+The current public v1 configs expand to `149` planned rows:
 
 | Stage | Expected rows |
 | --- | ---: |
@@ -54,6 +54,7 @@ The current public v1 configs expand to `141` planned rows:
 | `contribution_scores` | 8 |
 | `subset_usage` | 24 |
 | `feature_ablation` | 24 |
+| `native_subspace_ablation` | 8 |
 
 The generated `reproduction_run_plan.json` is the source of truth. If configs
 change, regenerate the plan rather than editing row counts by hand.
@@ -103,7 +104,8 @@ Supported staging profiles are:
 | `dino_clevr_count_v1_trial` | 14 | Single-model DINO/CLEVR/Count slice. |
 | `ijepa_clevr_count_v1_trial` | 14 | Single-model I-JEPA/CLEVR/Count slice. |
 | `layer_sweep_v1_trial` | 27 | Default second-last and representative-layer ImageNet availability slice. |
-| `full_v1_template` | 141 | Full public v1 saved-array release template, including ranking-control and default layer-sweep rows. |
+| `module_f_nyuv2_v1_trial` | 8 | Module F NYUv2 native-subspace ablation slice. |
+| `full_v1_template` | 149 | Full public v1 saved-array release template, including ranking-control, default layer-sweep, and Module F rows. |
 
 The generated manifest is still a handoff sheet, not proof that the artifact
 slice is ready. Fill `source_artifact_dir` only after inspecting private or
@@ -167,7 +169,7 @@ bash scripts/stage_artifact_bundle_from_manifest.sh \
 This wrapper runs audit, copy, `check-bundle --require-complete`,
 `index-artifacts --require-valid`, `make-tables`, and
 `package_artifact_bundle.sh` in order. Use a subset run plan if you are staging
-a partial release; the full public v1 run plan expects all `141` rows.
+a partial release; the full public v1 run plan expects all `149` rows.
 
 ## Required Artifact Root Layout
 

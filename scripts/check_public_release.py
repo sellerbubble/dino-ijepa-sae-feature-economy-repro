@@ -59,6 +59,7 @@ REQUIRED_FILES = [
     "configs/tasks/nyuv2.yaml",
     "configs/tasks/ade20k.yaml",
     "configs/tasks/clevr_count.yaml",
+    "configs/advanced/module_f_native_ablation_nyuv2.yaml",
 ]
 
 REQUIRED_EXECUTABLES = [

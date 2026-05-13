@@ -99,6 +99,10 @@ REQUIRED_FILES_BY_STAGE = {
         "feature_ablation_summary.json",
         "run_manifest.json",
     ],
+    "native_subspace_ablation": [
+        "native_subspace_ablation_summary.json",
+        "run_manifest.json",
+    ],
 }
 
 DEFAULT_TRIAL_STAGE_STATUS = {
@@ -111,6 +115,7 @@ DEFAULT_TRIAL_STAGE_STATUS = {
     "contribution_scores": "TODO",
     "subset_usage": "NEEDS_CONVERSION",
     "feature_ablation": "NEEDS_CONVERSION",
+    "native_subspace_ablation": "TODO",
 }
 
 DEFAULT_TRIAL_STAGE_NOTES = {
@@ -123,6 +128,7 @@ DEFAULT_TRIAL_STAGE_NOTES = {
     "contribution_scores": "Recompute from public SAE probe outputs unless a compatible score array is found.",
     "subset_usage": "Convert combined summary or recompute from public codes/ranking.",
     "feature_ablation": "Convert combined summary or recompute from public codes/ranking/probe logits.",
+    "native_subspace_ablation": "Run public Module F command from saved native features, lightweight SAE checkpoint, ranking, and SAE probe logits.",
 }
 
 BASE_PAPER_EXPERIMENT_IDS = {
@@ -140,6 +146,7 @@ def _trial_profile(
     sae_ids: set[str],
     stage_notes: dict[str, str] | None = None,
     experiment_ids: set[str] | None = None,
+    stages: set[str] | None = None,
 ) -> dict[str, Any]:
     notes = dict(DEFAULT_TRIAL_STAGE_NOTES)
     if stage_notes:
@@ -149,7 +156,7 @@ def _trial_profile(
         "model_ids": model_ids,
         "task_ids": task_ids,
         "sae_ids": sae_ids,
-        "stages": set(),
+        "stages": set(stages or set()),
         "experiment_ids": set(experiment_ids or BASE_PAPER_EXPERIMENT_IDS),
         "stage_status": dict(DEFAULT_TRIAL_STAGE_STATUS),
         "stage_notes": notes,
@@ -239,6 +246,19 @@ PROFILE_FILTERS = {
         "stage_status": {},
         "stage_notes": {},
     },
+    "module_f_nyuv2_v1_trial": _trial_profile(
+        description="Module F NYUv2 native-subspace ablation slice for final and second-last layers.",
+        model_ids={"dino_v2_base", "ijepa_vit_h14"},
+        task_ids={"nyuv2_depth"},
+        sae_ids={
+            "dino_l11_topk32_exp4",
+            "ijepa_l31_topk32_exp4",
+            "dino_l10_topk32_exp4",
+            "ijepa_l30_topk32_exp4",
+        },
+        stages={"native_subspace_ablation"},
+        experiment_ids={"module_f_native_ablation_nyuv2"},
+    ),
     "layer_sweep_v1_trial": _trial_profile(
         description="Default layer-sweep diagnostic slice: second-last and representative ImageNet-1K availability rows.",
         model_ids={"dino_v2_base", "ijepa_vit_h14"},

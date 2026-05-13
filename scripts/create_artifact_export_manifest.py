@@ -58,6 +58,10 @@ REQUIRED_FILES_BY_STAGE = {
         "feature_ablation_summary.json",
         "run_manifest.json",
     ],
+    "native_subspace_ablation": [
+        "native_subspace_ablation_summary.json",
+        "run_manifest.json",
+    ],
 }
 
 CSV_COLUMNS = [
@@ -155,6 +159,8 @@ def _validation_command(stage: str) -> str:
         return "validate-arrays where applicable; index-artifacts --require-valid"
     if stage == "contribution_scores":
         return "validate-arrays --kind contribution_scores; index-artifacts --require-valid"
+    if stage == "native_subspace_ablation":
+        return "index-artifacts --require-valid"
     return "index-artifacts --require-valid"
 
 

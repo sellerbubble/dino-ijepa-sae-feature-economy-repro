@@ -63,6 +63,7 @@ analysis/contribution/{sae_id}/{task_id}/val/
 analysis/ranking_controls/{sae_id}/{task_slug}/{method}/ranking/
 analysis/ranking_controls/{sae_id}/{task_slug}/{method}/subset_usage/
 analysis/ranking_controls/{sae_id}/{task_slug}/{method}/ablation/
+analysis/native_subspace_ablation/{advanced_config_id}/{run_id}/top_{k}/
 ```
 
 For layer sweeps, include the layer in `sae_id` and use one directory per SAE.
@@ -90,6 +91,7 @@ These are the files checked by `feature-economy check-bundle`.
 | `contribution_scores` | `contribution_scores.npz`, `contribution_scores_summary.json`, `run_manifest.json` |
 | `subset_usage` | `subset_usage_summary.json`, `run_manifest.json` |
 | `feature_ablation` | `feature_ablation_summary.json`, `run_manifest.json` |
+| `native_subspace_ablation` | `native_subspace_ablation_summary.json`, `run_manifest.json` |
 
 Optional but recommended validation reports:
 

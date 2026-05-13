@@ -59,11 +59,21 @@ with these arrays:
 - `encoder_weight`: shape `[input_dim, code_dim]`.
 - `encoder_bias`: shape `[code_dim]`, optional and defaults to zeros.
 - `decoder_bias`: shape `[input_dim]`, optional and defaults to zeros.
+- `decoder_weight`: shape `[code_dim, input_dim]`, optional for SAE-code
+  extraction but required for Module F native-subspace ablation.
 
 The backend applies the SAE runtime normalization from the SAE config, subtracts
 `decoder_bias`, applies the linear encoder, ReLU, and TopK sparsification. This
 format is intentionally narrower than the private training checkpoint format so
 public runs do not need the full SAE training package tree.
+
+Module F native-subspace ablation additionally needs the SAE decoder directions
+because it removes projections onto selected decoder directions in the SAE
+runtime-normalized hidden coordinate system. For current paper SAEs this means
+`layer_norm(x) - decoder_bias`; after projection removal the command inverts the
+normalization and re-encodes through the frozen SAE/probe path. Checkpoints
+without `decoder_weight` can still run ordinary SAE-code extraction, but
+`feature-economy ablate-native-subspace` will reject them.
 
 To convert a full checkpoint that stores standard SAE weights as `W_enc`,
 `b_enc`, and `b_dec`:

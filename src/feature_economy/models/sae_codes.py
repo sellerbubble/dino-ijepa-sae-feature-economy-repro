@@ -243,6 +243,11 @@ def _extract_lightweight_arrays(
         ["decoder_bias", "b_dec", "decoder.bias"],
         required=False,
     )
+    decoder_weight = _get_first_array(
+        state,
+        ["decoder_weight", "W_dec", "decoder.weight", "decoder.weight_orig"],
+        required=False,
+    )
     if encoder_weight is None:
         raise AssertionError("unreachable: required encoder_weight missing")
     encoder_weight = np.asarray(encoder_weight, dtype=np.float32)
@@ -253,11 +258,19 @@ def _extract_lightweight_arrays(
         encoder_bias = np.zeros(code_dim, dtype=np.float32)
     if decoder_bias is None:
         decoder_bias = np.zeros(input_dim, dtype=np.float32)
-    return {
+    arrays = {
         "encoder_weight": encoder_weight,
         "encoder_bias": np.asarray(encoder_bias, dtype=np.float32),
         "decoder_bias": np.asarray(decoder_bias, dtype=np.float32),
     }
+    if decoder_weight is not None:
+        decoder_weight = np.asarray(decoder_weight, dtype=np.float32)
+        if decoder_weight.shape == (input_dim, code_dim):
+            decoder_weight = decoder_weight.T
+        if decoder_weight.shape != (code_dim, input_dim):
+            raise ValueError("extracted decoder_weight must have shape [code_dim, input_dim]")
+        arrays["decoder_weight"] = decoder_weight
+    return arrays
 
 
 def load_lightweight_sae_checkpoint(path: str | Path) -> dict[str, np.ndarray]:
@@ -301,11 +314,19 @@ def load_lightweight_sae_checkpoint(path: str | Path) -> dict[str, np.ndarray]:
         raise ValueError("encoder_bias must have shape [code_dim]")
     if decoder_bias.shape != (input_dim,):
         raise ValueError("decoder_bias must have shape [input_dim]")
-    return {
+    out = {
         "encoder_weight": encoder_weight,
         "encoder_bias": encoder_bias,
         "decoder_bias": decoder_bias,
     }
+    if "decoder_weight" in checkpoint:
+        decoder_weight = np.asarray(checkpoint["decoder_weight"], dtype=np.float32)
+        if decoder_weight.shape == (input_dim, code_dim):
+            decoder_weight = decoder_weight.T
+        if decoder_weight.shape != (code_dim, input_dim):
+            raise ValueError("decoder_weight must have shape [code_dim, input_dim]")
+        out["decoder_weight"] = decoder_weight
+    return out
 
 
 def encode_linear_topk(

@@ -107,6 +107,7 @@ class PrepareRealArtifactSliceTests(unittest.TestCase):
             "dino_clevr_count_v1_trial": (14, {"clevr_count"}),
             "ijepa_clevr_count_v1_trial": (14, {"clevr_count"}),
             "layer_sweep_v1_trial": (27, {"imagenet_1k_val"}),
+            "module_f_nyuv2_v1_trial": (8, {"nyuv2_depth"}),
         }
         for profile, (expected_rows, expected_tasks) in expected.items():
             with self.subTest(profile=profile):
@@ -144,8 +145,10 @@ class PrepareRealArtifactSliceTests(unittest.TestCase):
                     elif profile.startswith("ijepa_"):
                         expected_models = {"ijepa_vit_h14"}
                     self.assertEqual({row["model_id"] for row in rows}, expected_models)
-                    self.assertIn("TODO", {row["export_status"] for row in rows})
-                    self.assertIn("NEEDS_CONVERSION", {row["export_status"] for row in rows})
+                    export_statuses = {row["export_status"] for row in rows}
+                    self.assertIn("TODO", export_statuses)
+                    if profile != "module_f_nyuv2_v1_trial":
+                        self.assertIn("NEEDS_CONVERSION", export_statuses)
 
 
 if __name__ == "__main__":

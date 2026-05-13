@@ -33,6 +33,7 @@ def build_reproduction_plan(config_root: str | Path) -> dict[str, Any]:
     tasks = _load_family(config_root, "tasks")
     experiments = _load_family(config_root, "experiments")
     sweeps = _load_family(config_root, "sweeps")
+    advanced = _load_family(config_root, "advanced")
     ranking_methods = sweeps.get("ranking_control", {}).get(
         "methods",
         ["probe_weight", "validation_contribution", "hybrid"],
@@ -190,6 +191,7 @@ def build_reproduction_plan(config_root: str | Path) -> dict[str, Any]:
             raise ConfigError(f"unsupported experiment mode in planner: {mode}")
 
     rows.extend(_layer_sweep_rows(models=models, saes=saes, sweeps=sweeps))
+    rows.extend(_advanced_rows(models=models, saes=saes, tasks=tasks, advanced=advanced))
 
     return {
         "record_type": "reproduction_run_plan",
@@ -314,6 +316,44 @@ def _layer_sweep_rows(
                     ),
                 ]
             )
+    return rows
+
+
+def _advanced_rows(
+    *,
+    models: dict[str, dict[str, Any]],
+    saes: dict[str, dict[str, Any]],
+    tasks: dict[str, dict[str, Any]],
+    advanced: dict[str, dict[str, Any]],
+) -> list[dict[str, str]]:
+    rows: list[dict[str, str]] = []
+    for advanced_id, config in sorted(advanced.items()):
+        if config["mode"] != "native_subspace_ablation":
+            raise ConfigError(f"unsupported advanced mode in planner: {config['mode']}")
+        task = _require_known(tasks, str(config["task_id"]), "task")
+        for run in config["runs"]:
+            model_id = str(run["model"])
+            sae_id = str(run["sae"])
+            _require_known(models, model_id, "model")
+            sae = _require_known(saes, sae_id, "sae")
+            if sae["model_id"] != model_id:
+                raise ConfigError(f"SAE {sae_id} does not belong to model {model_id}")
+            for top_k in run["top_ks"]:
+                rows.append(
+                    _row(
+                        stage="native_subspace_ablation",
+                        experiment_id=advanced_id,
+                        task=task,
+                        model_id=model_id,
+                        sae_id=sae_id,
+                        command="ablate-native-subspace",
+                        artifact_dir=(
+                            "${ARTIFACT_ROOT}/analysis/native_subspace_ablation/"
+                            f"{advanced_id}/{run['id']}/top_{top_k}"
+                        ),
+                        ranking_method=str(run["ranking_source"]),
+                    )
+                )
     return rows
 
 
