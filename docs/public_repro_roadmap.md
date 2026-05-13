@@ -11,6 +11,11 @@ is a full paper-style rerun repo with smoke tests for code health and optional
 saved-array audit support. Private one-off cluster launchers remain out of
 scope unless they can be converted into portable public runners.
 
+The next upgrade is tracked in `docs/paper_faithful_upgrade_plan.md`. That plan
+keeps lightweight probes as smoke/CI diagnostics while moving the default full
+rerun path toward paper-scale trainers, robustness sweeps, layer sweeps, and
+advanced native-space controls.
+
 ## End State
 
 External readers should be able to reproduce the main paper chain:

@@ -66,6 +66,10 @@ Public v1 does not claim:
 These omissions are release-boundary decisions, not hidden TODOs. They keep the
 first public repo executable, auditable, and portable.
 
+For the follow-up plan that upgrades this release from lightweight-first
+diagnostics toward paper-faithful trainers and agent-friendly experiment
+modules, see `docs/paper_faithful_upgrade_plan.md`.
+
 ## Required Public Gates
 
 A public v1 checkout should provide these gates:
