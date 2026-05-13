@@ -376,10 +376,8 @@ Release files:
 | `feature_economy_artifacts_v1.tar.gz` | approximately 7.4 GiB |
 | `feature_economy_artifacts_v1.tar.gz.sha256` | archive checksum |
 | `feature_economy_artifacts_v1_release_manifest.json` | release manifest |
-| `feature_economy_artifacts_v1.tar.gz.part-00` | 1.9 GiB |
-| `feature_economy_artifacts_v1.tar.gz.part-01` | 1.9 GiB |
-| `feature_economy_artifacts_v1.tar.gz.part-02` | 1.9 GiB |
-| `feature_economy_artifacts_v1.tar.gz.part-03` | 1.8 GiB |
+| `feature_economy_artifacts_v1.tar.gz.part-00` ... `part-13` | 512 MiB each |
+| `feature_economy_artifacts_v1.tar.gz.part-14` | approximately 361 MiB |
 | `feature_economy_artifacts_v1.tar.gz.parts.sha256` | per-part checksums |
 
 The split parts were also checked by concatenating them and comparing the
@@ -389,7 +387,7 @@ For future releases, use the scripted helper instead of manual `split`:
 ```bash
 python scripts/split_release_archive.py \
   --archive "${RELEASE_OUTPUT_DIR}/feature_economy_artifacts_v1.tar.gz" \
-  --part-size 1900M \
+  --part-size 512M \
   --force
 ```
 

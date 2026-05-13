@@ -65,7 +65,7 @@ Reassemble and verify:
 cat feature_economy_artifacts_v1.tar.gz.part-* > feature_economy_artifacts_v1.tar.gz
 sha256sum -c feature_economy_artifacts_v1.tar.gz.sha256
 tar -xzf feature_economy_artifacts_v1.tar.gz
-export ARTIFACT_ROOT=$PWD/feature_economy_artifacts_v1
+export ARTIFACT_ROOT=$PWD/public_repro_feature_economy_v1_candidate
 export PYTHONPATH=$PWD/src
 ```
 

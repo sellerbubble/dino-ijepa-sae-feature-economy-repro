@@ -72,6 +72,7 @@ gh release download v1-saved-array-20260513 \
 cat feature_economy_artifacts_v1.tar.gz.part-* > feature_economy_artifacts_v1.tar.gz
 sha256sum -c feature_economy_artifacts_v1.tar.gz.sha256
 tar -xzf feature_economy_artifacts_v1.tar.gz
+export ARTIFACT_ROOT=$PWD/public_repro_feature_economy_v1_candidate
 ```
 
 The unpacked bundle contains the public v1 saved-array evidence chain:

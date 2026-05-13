@@ -42,7 +42,7 @@ and analysis summaries for the configured DINO/I-JEPA public v1 matrix.
 | Generated CSV tables | probe scores, availability, subset usage, and ablation summaries |
 | Metadata sanitizer | PASS, `0` remaining private-path hits |
 | Packaged archive | `${PRIVATE_ARTIFACT_ROOT}/public_repro_release_assets/feature_economy_artifacts_v1.tar.gz` |
-| Release split parts | four parts, each below 2 GiB |
+| Release split parts | 15 parts: `part-00` ... `part-13` at 512 MiB and `part-14` at approximately 361 MiB |
 | Reassembly check | PASS, concatenated parts match archive SHA256 |
 
 ## Commands
