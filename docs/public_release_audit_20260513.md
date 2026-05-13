@@ -46,6 +46,7 @@ The intended public v1 boundary is fixed in `docs/public_v1_scope.md`.
 | Standalone public CI | `.github/workflows/ci.yml` | Runs unit tests, release hygiene, `scripts/reproduce_smoke.sh`, and `scripts/build_tiny_artifact_bundle.sh` when `public_repro` is exported as a repository root. | Not executed by GitHub until the public repo/export is created. |
 | Runtime/config/model gates | `check-runtime`, `check-configs`, `check-models` | Command help inspected; smoke executes all three. | Real checkpoint existence is only enforced when users pass `--require-resolved-checkpoints`. |
 | Run matrix planning | `plan-runs`, `reproduction_run_plan.json`, `reproduction_run_plan.csv` | Unit-tested and smoke-tested; expands native, SAE, availability, Access, and Allocation rows from public configs. | This is a launch checklist, not an executor. |
+| Full profile launcher | `scripts/run_full_profile.sh` | Dry-run verified locally on 2026-05-13 for the first public vertical slice, `dino_imagenet_l11`. It chains runtime/config/model/manifest gates, feature extraction, native and SAE probes, SAE-code extraction, Availability, Access, Allocation, artifact indexing, tables, and optional figures. | Currently supports one conservative full profile. Additional models, layers, tasks, and SAE settings should extend this launcher or add sibling profiles under the same artifact contract. |
 | Artifact bundle completeness | `check-bundle`, `artifact_bundle_check.json` | Unit-tested; checks required files for every run-plan row and can fail with `--require-complete`. | Checks file presence, not scientific correctness of metrics. |
 | Dataset manifest gate | `check-manifest`, `ManifestDataset`, `inspect-images` | Smoke validates a dense-depth manifest; docs describe ImageNet/CLEVR/NYUv2/ADE20K manifest rows. | Real public dataset download/preprocessing scripts are not included. |
 | Shared transform policy | `configs/models/*.yaml`, `models/transforms.py`, `inspect-images` | Implemented with PIL/NumPy resize, center crop, RGB conversion, ImageNet normalization. | Public exactness depends on users using the same configs for exported feature modules. |
@@ -91,7 +92,9 @@ It is not yet suitable for claiming:
 1. Export the standalone repository tree with `scripts/export_public_repo.sh`,
    initialize a public GitHub repository from that tree, and let the standalone
    CI run before publishing saved-array assets.
-2. Run a clean-machine lightweight rerun on at least one real public
-   model/task/SAE slice.
-3. Revisit exact paper-scale probe training only if the escalation rule in
+2. Run `scripts/run_full_profile.sh dino_imagenet_l11` on a clean GPU machine
+   with real manifests, a DINO checkpoint, and an SAE checkpoint.
+3. Extend the full-profile launcher to the matched I-JEPA/ImageNet slice, then
+   to NYUv2, ADE20K, and CLEVR/Count.
+4. Revisit exact paper-scale probe training only if the escalation rule in
    `docs/public_v1_scope.md` is satisfied.

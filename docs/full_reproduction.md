@@ -50,7 +50,9 @@ validate configs/manifests/runtime
   -> export paper-style tables and figures
 ```
 
-The detailed command template is in `docs/canonical_chain_runbook.md`.
+The preferred executable entrypoint is `scripts/run_full_profile.sh`. The
+detailed manual command template remains available in
+`docs/canonical_chain_runbook.md`.
 
 ## Recommended First Full Profile
 
@@ -65,6 +67,34 @@ stages: feature extraction -> SAE codes -> SAE probe -> Availability -> Access -
 
 This profile exercises the same artifact contracts as the full matrix while
 keeping debugging manageable.
+
+Preview the complete command chain without running GPU work:
+
+```bash
+export DATA_ROOT=/path/to/manifests
+export SAE_ROOT=/path/to/sae_checkpoints
+export ARTIFACT_ROOT=/path/to/output_artifacts
+export PYTHONPATH=$PWD/src
+
+DRY_RUN=1 bash scripts/run_full_profile.sh dino_imagenet_l11
+```
+
+Run the profile on real data and checkpoints:
+
+```bash
+export DATA_ROOT=/path/to/manifests
+export SAE_ROOT=/path/to/sae_checkpoints
+export ARTIFACT_ROOT=/path/to/output_artifacts
+export PYTHONPATH=$PWD/src
+
+bash scripts/run_full_profile.sh dino_imagenet_l11
+```
+
+This first public launcher is intentionally conservative: it starts with one
+vertical slice and preserves the same artifact layout expected by the broader
+paper-style chain. Additional model, layer, task, and SAE profiles should extend
+this launcher or add sibling profiles rather than creating unrelated one-off
+scripts.
 
 ## Output Layout
 

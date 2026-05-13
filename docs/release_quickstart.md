@@ -59,6 +59,22 @@ SAE checkpoints, GPU resources, and dense targets when needed.
 
 For expected score ranges and qualitative checks, see `docs/expected_results.md`.
 
+The recommended entrypoint for the first full vertical slice is:
+
+```bash
+export DATA_ROOT=/path/to/manifests
+export SAE_ROOT=/path/to/sae_checkpoints
+export ARTIFACT_ROOT=/path/to/output_artifacts
+export PYTHONPATH=$PWD/src
+
+DRY_RUN=1 bash scripts/run_full_profile.sh dino_imagenet_l11
+bash scripts/run_full_profile.sh dino_imagenet_l11
+```
+
+Use the dry run first to inspect every command and output path. The manual
+commands below are the expanded version of the same chain for users who need to
+customize individual stages.
+
 Set paths:
 
 ```bash
